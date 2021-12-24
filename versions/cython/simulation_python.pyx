@@ -36,7 +36,6 @@ def calc_acc(G, pos, mass, soft_param):
 
     return acc
 
-
 def simulate(G, N, dt, t, t_max, soft_param):
     '''
     Calculate values for simulation
@@ -62,11 +61,14 @@ def simulate(G, N, dt, t, t_max, soft_param):
     # calculate timesteps for plotting
     steps = int(np.ceil(t_max/dt))
 
+    # TODO use triangular matrix to avoid calcualting same particales twice
+
     # data store for plotting, define t=0
     pos_t = np.zeros((N,3,steps+1))
     pos_t[:,:,0] = pos
 
     # Iteration loop by leapfrog integration
+    # TODO explain in report
     for i in range(steps):
 		    # first kick
         vel += acc * dt/2.0
