@@ -23,7 +23,7 @@ def calc_acc(G, pos, mass, soft_param):
     dz = np.transpose(z) - z
 
     # matrix of inverse seperations cubed (1/r^3)
-    inv_sep = dx**2 + dy**2 + dz**2 + soft_param**2
+    inv_sep = dx**2 + dy**2 + dz**2 + soft_param
     inv_sep[inv_sep != 0] = inv_sep[inv_sep !=0] ** -1.5 # TODO zero check, does this work?
 
     # calculate acceleration components
@@ -36,40 +36,22 @@ def calc_acc(G, pos, mass, soft_param):
 
     return acc
 
-def simulate(G, N, dt, t, t_max, soft_param):
+def simulate(pos, mass, vel, G, N, dt, t_max, soft_param):
     '''
     Calculate values for simulation
     '''
+    # TODO use triangular matrix to avoid calcualting same particales twice
 
-    # generate initial conditions
-    np.random.seed(17)
-
-    pos  = np.random.randn(N,3) # normally distributed positions
-    vel  = np.random.randn(N,3) # normally distributed velocities
-    # vel  = np.random.randn(N,3) # normally distributed velocities
-    mass = np.ones((N,1)) # particle mass is 1.0
-
-    # convert to Center-of-Mass frame (??)
-    vel -= np.mean(mass * vel, 0) / np.mean(mass)
+    # data store for plotting, define t=0
+    steps = int(np.ceil(t_max/dt))
+    pos_t = np.zeros((N,3,steps+1))
+    pos_t[:,:,0] = pos
 
     # calculate initial conditions
     acc = calc_acc(G, pos, mass, soft_param)
 
-    # setup initial heavy one
-    # pos[0] = [0,0,0]
-    # mass[0] = 1.0 * 10**(30)
-
-    # calculate timesteps for plotting
-    steps = int(np.ceil(t_max/dt))
-
-    # TODO use triangular matrix to avoid calcualting same particales twice
-
-    # data store for plotting, define t=0
-    pos_t = np.zeros((N,3,steps+1))
-    pos_t[:,:,0] = pos
-
     # Iteration loop by leapfrog integration
-    # TODO explain in report
+    t = 0
     for i in range(steps):
 	    # first kick
         vel += acc * dt/2.0
@@ -87,6 +69,6 @@ def simulate(G, N, dt, t, t_max, soft_param):
         t += dt
 
 	    # get energy of system
-        pos_t[:,:,i+1] = np.copy(pos)
+        pos_t[:,:,i+1] = np.copy(pos) # TODO this can be lots of memory, maybe don't inlcude?
 
     return pos_t

@@ -35,20 +35,20 @@ parser.add_argument('--t_max', type=float, default=10.0, help='how many seconds 
 
 args = parser.parse_args()
 
-def run_simulation(simulation, G, N, dt, t, t_max, soft_param):
+def run_simulation(simulation, pos, mass, vel, G, N, dt, t_max, soft_param):
     start = timeit.default_timer()
 
     pos_t = None
     if simulation == 'python':
-        pos_t = simulation_python.simulate(G, N, dt, t, t_max, soft_param)
+        pos_t = simulation_python.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
     elif simulation == 'cython':
-        pass # pos_t = simulation_cython.simulate(G, N, dt, t, t_max, soft_param)
+        pass # pos_t = simulation_cython.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
 
     end = timeit.default_timer()
 
     return end-start, pos_t
 
-def plot_at_index(name, i, fps, pos_t, N, dt, t, t_max):
+def plot_at_index(name, i, fps, pos_t, N, dt, t_max):
     t = i / fps
 
     fig = plt.figure(name, dpi=100)
@@ -66,11 +66,15 @@ def plot_at_index(name, i, fps, pos_t, N, dt, t, t_max):
 
     return fig, scatter, title
 
-def draw(i, title, fps, scatter, pos_t, N, dt, t, t_max):
+def draw(i, title, fps, scatter, pos_t, N, dt, t_max):
     t = i / fps
     title.set_text('Gravity Simulator\nN=%i dt=%.2f t=%.2fs t_max=%.2fs' % (N, dt, t, t_max))
 
     scatter._offsets3d = (pos_t[:,0,i], pos_t[:,1,i], pos_t[:,2,i])
+
+# ---------------------------------
+# Load stats
+stats = pickle.load(open('stats.p', 'rb'))
 
 # ---------------------------------
 # Initalise parameters
@@ -80,12 +84,7 @@ dt = args.dt
 t_max = args.t_max
 
 G = 1 # 6.6743 * 10**(-11) # m^3/(kg*s^2)    # Gravitational Constant - G =
-t = 0   # current time of the simulation
-soft_param = 0.1    # softening parameter
-
-# ---------------------------------
-# Load stats
-stats = pickle.load(open('stats.p', 'rb'))
+soft_param = 1e-20    # softening parameter, what should this value be?
 
 # ---------------------------------
 # Run simulation
@@ -95,7 +94,7 @@ for simulation in args.simulation:
 
     stat = {
         'date': datetime.datetime.now(),
-        'dt': dt, 't': t, 't_max': t_max, 'soft_param': soft_param,
+        'dt': dt, 't_max': t_max, 'soft_param': soft_param,
         'runs': {'N': [], 'duration': []},
     }
 
@@ -103,7 +102,19 @@ for simulation in args.simulation:
         durations = []
         pos_t = None
         for i in range(args.average_over):
-            duration, _pos_t = run_simulation(simulation, G, N, dt, t, t_max, soft_param)
+            # ---------------------------------
+            # Initalise enviroment
+            pos  = np.random.randn(N,3) # normally distributed positions
+            vel  = np.random.randn(N,3) # normally distributed velocities
+            mass = np.ones((N,1)) # particle mass is 1.0
+
+            vel -= np.mean(mass * vel, 0) / np.mean(mass) # convert to Center-of-Mass frame (??)
+
+            # setup initial heavy one
+            # pos[0] = [0,0,0]
+            # mass[0] = 1.0 * 10**(30)
+
+            duration, _pos_t = run_simulation(simulation, pos, mass, vel, G, N, dt, t_max, soft_param)
             durations.append(duration)
             pos_t = _pos_t
 
@@ -117,14 +128,14 @@ for simulation in args.simulation:
         fps = (pos_t.shape[2]-1) / t_max
 
         if args.plot_start:
-            plot_at_index('Gravity Simulator - Start', 0, fps, pos_t, N, dt, t, t_max)
+            plot_at_index('Gravity Simulator - Start', 0, fps, pos_t, N, dt, t_max)
 
         if args.plot_end:
-            plot_at_index('Gravity Simulator - End', pos_t.shape[2]-1, fps, pos_t, N, dt, t, t_max)
+            plot_at_index('Gravity Simulator - End', pos_t.shape[2]-1, fps, pos_t, N, dt, t_max)
 
         if args.animate:
-            fig, scatter, title = plot_at_index('Gravity Simulator - Animated', 0, fps, pos_t, N, dt, t, t_max)
-            ani = matplotlib.animation.FuncAnimation(fig, draw, frames=pos_t.shape[2], fargs=(title, fps, scatter, pos_t, N, dt, t, t_max), interval=round(1000 / fps), repeat=False)
+            fig, scatter, title = plot_at_index('Gravity Simulator - Animated', 0, fps, pos_t, N, dt, t_max)
+            ani = matplotlib.animation.FuncAnimation(fig, draw, frames=pos_t.shape[2], fargs=(title, fps, scatter, pos_t, N, dt, t_max), interval=round(1000 / fps), repeat=False)
 
         plt.show()
 
