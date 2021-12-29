@@ -7,7 +7,7 @@ import os
 os.environ["CC"] = "/usr/local/opt/llvm/bin/clang"
 
 # define an extension that will be cythonized and compiled
-ext = Extension('test', sources=["*.pyx"], extra_compile_args=['-fopenmp'], extra_link_args=['-fopenmp'], include_dirs=[numpy.get_include()])
+ext = Extension('simulation_cython', sources=["simulation_cython.pyx"], extra_compile_args=['-fopenmp'], extra_link_args=['-fopenmp'], include_dirs=[numpy.get_include()])
 setup(ext_modules=cythonize(ext))
 
 # all .pyx files in a folder

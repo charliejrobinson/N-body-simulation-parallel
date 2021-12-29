@@ -1,10 +1,10 @@
 import os
-os.environ ["MKL_NUM_THREADS"] = "1"
-os.environ ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["OMP_NUM_THREADS"] = "1"
 
 import simulation_python
-import simulation_cython
+#import simulation_cython
 
 import numpy as np
 import pickle
@@ -42,7 +42,7 @@ def run_simulation(simulation, G, N, dt, t, t_max, soft_param):
     if simulation == 'python':
         pos_t = simulation_python.simulate(G, N, dt, t, t_max, soft_param)
     elif simulation == 'cython':
-        pos_t = simulation_cython.simulate(G, N, dt, t, t_max, soft_param)
+        pass # pos_t = simulation_cython.simulate(G, N, dt, t, t_max, soft_param)
 
     end = timeit.default_timer()
 
@@ -79,7 +79,7 @@ np.random.seed(args.seed)
 dt = args.dt
 t_max = args.t_max
 
-G = 1.0    # Gravitational Constant - G = 6.6743 * 10**(-11) # m^3/(kg*s^2)
+G = 1 # 6.6743 * 10**(-11) # m^3/(kg*s^2)    # Gravitational Constant - G =
 t = 0   # current time of the simulation
 soft_param = 0.1    # softening parameter
 

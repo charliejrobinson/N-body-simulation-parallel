@@ -12,7 +12,6 @@ def calc_acc(G, pos, mass, soft_param):
     -------
     acc : Matrix of accelerations
     '''
-
     # particle positions r=(x,y,z)
     x = pos[:,0:1]
     y = pos[:,1:2]
@@ -24,7 +23,8 @@ def calc_acc(G, pos, mass, soft_param):
     dz = np.transpose(z) - z
 
     # matrix of inverse seperations cubed (1/r^3)
-    inv_sep = (dx**2 + dy**2 + dz**2 + soft_param**2)**(-1.5)
+    inv_sep = dx**2 + dy**2 + dz**2 + soft_param**2
+    inv_sep[inv_sep != 0] = inv_sep[inv_sep !=0] ** -1.5 # TODO zero check, does this work?
 
     # calculate acceleration components
     ax = np.matmul(G * (dx * inv_sep), mass)
@@ -45,8 +45,9 @@ def simulate(G, N, dt, t, t_max, soft_param):
     np.random.seed(17)
 
     pos  = np.random.randn(N,3) # normally distributed positions
-    vel  = np.zeros((N,3)) #np.random.randn(N,3) # normally distributed velocities
-    mass = 1.0 * np.ones((N,1))  # particle mass is 1.0
+    vel  = np.random.randn(N,3) # normally distributed velocities
+    # vel  = np.random.randn(N,3) # normally distributed velocities
+    mass = np.ones((N,1)) # particle mass is 1.0
 
     # convert to Center-of-Mass frame (??)
     vel -= np.mean(mass * vel, 0) / np.mean(mass)
@@ -55,8 +56,8 @@ def simulate(G, N, dt, t, t_max, soft_param):
     acc = calc_acc(G, pos, mass, soft_param)
 
     # setup initial heavy one
-    pos[0] = [0,0,0]
-    mass[0] = 1.0 * 10**(30)
+    # pos[0] = [0,0,0]
+    # mass[0] = 1.0 * 10**(30)
 
     # calculate timesteps for plotting
     steps = int(np.ceil(t_max/dt))
@@ -70,22 +71,22 @@ def simulate(G, N, dt, t, t_max, soft_param):
     # Iteration loop by leapfrog integration
     # TODO explain in report
     for i in range(steps):
-		    # first kick
+	    # first kick
         vel += acc * dt/2.0
 
-		    # drift
+	    # drift
         pos += vel * dt
 
-		    # recalculate accelerations
+	    # recalculate accelerations
         acc = calc_acc(G, pos, mass, soft_param)
 
-		    # second kick
+	    # second kick
         vel += acc * dt/2.0
 
-		    # new time
+	    # new time
         t += dt
 
-		    # get energy of system
+	    # get energy of system
         pos_t[:,:,i+1] = np.copy(pos)
 
     return pos_t
