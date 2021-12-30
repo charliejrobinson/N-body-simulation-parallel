@@ -4,6 +4,11 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
 
 import simulation_python
+import simulation_python_original
+import simulation_python_sqrt
+import simulation_chris_final
+import simulation_python_without_numpy
+import simulation_cython_without_numpy
 #import simulation_cython
 
 import numpy as np
@@ -22,14 +27,15 @@ import timeit
 import argparse
 
 parser = argparse.ArgumentParser(description='Gravity Simulator')
-parser.add_argument('--simulation', type=str, nargs='*', default=[], choices=['python', 'cython'], help='Which simulation to use')
+parser.add_argument('--simulation', type=str, nargs='*', default=[], choices=['python', 'cython', 'python_original', 'python_sqrt', 'chris', 'without_numpy', 'cython_without_numpy'], help='Which simulation to use')
 parser.add_argument('--animate', action='store_true', help='plot animated graphs')
 parser.add_argument('--plot_start', action='store_true', help='plots start graph')
 parser.add_argument('--plot_end', action='store_true', help='plots end graph')
 parser.add_argument('--stats', action='store_true', help='plots stats')
+parser.add_argument('--record', action='store_true', help='record result to stats')
 parser.add_argument('--average_over', type=int, default=3, help='Number of runs to average over')
 parser.add_argument('--seed', type=int, default=17, help='random seed to use')
-parser.add_argument('--N', type=int, nargs='+', default=[3, 50, 100, 200, 400], help='number of particles')
+parser.add_argument('--N', type=int, nargs='+', default=[3, 50, 100, 200, 400, 600, 800], help='number of particles')
 parser.add_argument('--dt', type=float, default=0.01, help='timestep')
 parser.add_argument('--t_max', type=float, default=10.0, help='how many seconds simulation runs for')
 
@@ -41,6 +47,16 @@ def run_simulation(simulation, pos, mass, vel, G, N, dt, t_max, soft_param):
     pos_t = None
     if simulation == 'python':
         pos_t = simulation_python.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
+    elif simulation == 'python_original':
+        pos_t = simulation_python_original.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
+    elif simulation == 'python_sqrt':
+        pos_t = simulation_python_sqrt.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
+    elif simulation == 'chris':
+        pos_t = simulation_chris_final.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
+    elif simulation == 'without_numpy':
+        pos_t = simulation_python_without_numpy.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
+    elif simulation == 'cython_without_numpy':
+        pos_t = simulation_cython_without_numpy.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
     elif simulation == 'cython':
         pass # pos_t = simulation_cython.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
 
@@ -85,6 +101,8 @@ t_max = args.t_max
 
 G = 1 # 6.6743 * 10**(-11) # m^3/(kg*s^2)    # Gravitational Constant - G =
 soft_param = 1e-20    # softening parameter, what should this value be?
+
+# pos_offset = 20000 # TODO remove
 
 # ---------------------------------
 # Run simulation
@@ -143,7 +161,9 @@ for simulation in args.simulation:
 
 # ---------------------------------
 # Write stats
-pickle.dump(stats, open('stats.p', 'wb'))
+if args.record:
+    print('Saving to stats.p')
+    pickle.dump(stats, open('stats.p', 'wb'))
 
 # ---------------------------------
 

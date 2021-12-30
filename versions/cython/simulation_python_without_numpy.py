@@ -1,8 +1,5 @@
 import numpy as np
-from scipy.spatial.distance import pdist, squareform
-
-# TODO remove
-np.set_printoptions(precision=3)
+import math
 
 def calc_acc(G, pos, mass, soft_param):
     '''
@@ -16,35 +13,23 @@ def calc_acc(G, pos, mass, soft_param):
     -------
     acc : Matrix of accelerations
     '''
-    # particle positions r=(x,y,z)
-    x = pos[:,0:1]
-    y = pos[:,1:2]
-    z = pos[:,2:3]
+    acc = np.zeros(pos.shape)
 
-    # calculate particle seperations
-    dx = pdist(x)
-    dy = pdist(y)
-    dz = pdist(z)
+    for i, (x1, y1, z1) in enumerate(pos):
+        for (x2, y2, z2) in pos:
+            # calculate particle seperations
+            dx = x2 - x1
+            dy = y2 - y1
+            dz = z2 - z1
 
-    # matrix of inverse seperations cubed (1/r^3)
-    squared_distance = dx**2 + dy**2 + dz**2 + soft_param
-    inv_sep = ((1.0 / np.sqrt(squared_distance)) ** 3)
+            # matrix of inverse seperations cubed (1/r^3)
+            inv_sep = dx**2 + dy**2 + dz**2 + soft_param
+            inv_sep = (1.0 / math.sqrt(inv_sep)) ** 3
 
-    dx2 = (x.T - x) * squareform(inv_sep)
-    dy2 = (y.T - y) * squareform(inv_sep)
-    dz2 = (z.T - z) * squareform(inv_sep)
-
-    # print(dx2)
-    #
-    # print(squareform(dx * inv_sep))
-
-    # calculate acceleration components
-    ax = np.matmul(dx2, G*mass)
-    ay = np.matmul(dy2, G*mass)
-    az = np.matmul(dz2, G*mass)
-
-    # create acceleration matrix
-    acc = np.hstack((ax,ay,az))
+            # calculate acceleration components
+            acc[i][0] = G * (dx * inv_sep) * mass[i][0]
+            acc[i][1] = G * (dy * inv_sep) * mass[i][0]
+            acc[i][2] = G * (dz * inv_sep) * mass[i][0]
 
     return acc
 
