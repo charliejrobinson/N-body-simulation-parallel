@@ -26,6 +26,7 @@ def calc_acc(G, pos, mass, soft_param):
     dz = np.transpose(z) - z
 
     # matrix of inverse seperations cubed (1/r^3)
+    # TODO use sqrt
     inv_sep = (dx**2 + dy**2 + dz**2 + soft_param**2)**(-1.5)
 
     # calculate acceleration components

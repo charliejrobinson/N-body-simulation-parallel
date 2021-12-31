@@ -1,6 +1,9 @@
+cimport cython
 import numpy as np
-from libc.math cimport sqrt
+# cimport numpy as np
+from libc.math cimport sqrt, pow
 
+@cython.cdivision(True)
 cdef double[:,:] calc_acc(float G, double[:,:] pos, double[:,:] mass, float soft_param):
     '''
     Parameters
@@ -18,6 +21,8 @@ cdef double[:,:] calc_acc(float G, double[:,:] pos, double[:,:] mass, float soft
     cdef Py_ssize_t i, j
     cdef double x1, y1, z1, x2, yz, z2
     cdef int N = pos.shape[0]
+    cdef double inv_sep
+    cdef double dx, dy, dz
 
     for i in range(N):
         for j in range(N):
@@ -27,25 +32,27 @@ cdef double[:,:] calc_acc(float G, double[:,:] pos, double[:,:] mass, float soft
             dz = pos[j,2] - pos[i,2]
 
             # matrix of inverse seperations cubed (1/r^3)
-            inv_sep = dx**2 + dy**2 + dz**2 + soft_param
-            inv_sep = (1.0 / sqrt(inv_sep)) ** 3
+            # inv_sep = pow(1.0 / sqrt(pow(dx, 2) + pow(dy, 2) + pow(dz, 2) + soft_param), 3)
+            # TODO
+            inv_sep = (dx**2 + dy**2 + dz**2 + soft_param**2)**(-1.5)
 
             # calculate acceleration components
-            acc[i,0] = G * (dx * inv_sep) * mass[j][0]
-            acc[i,1] = G * (dy * inv_sep) * mass[j][0]
-            acc[i,2] = G * (dz * inv_sep) * mass[j][0]
+            acc[i,0] += G * (dx * inv_sep) * mass[j][0]
+            acc[i,1] += G * (dy * inv_sep) * mass[j][0]
+            acc[i,2] += G * (dz * inv_sep) * mass[j][0]
 
-    return np.array(acc)
+    return acc
 
+@cython.cdivision(True)
 cdef double[:,:] leapfrog(double[:,:] acc, double[:,:] vel, double[:,:] pos, double[:,:] mass, float soft_param, float G, double dt):
   cdef int N = pos.shape[0]
   cdef Py_ssize_t i
 
   for i in range(N):
       # first kick
-      vel[i,0] += acc[i,0] * dt/2.0
-      vel[i,1] += acc[i,1] * dt/2.0
-      vel[i,2] += acc[i,2] * dt/2.0
+      vel[i,0] += acc[i,0] * (dt/2.0)
+      vel[i,1] += acc[i,1] * (dt/2.0)
+      vel[i,2] += acc[i,2] * (dt/2.0)
 
       # drift
       pos[i,0] += vel[i,0] * dt
@@ -57,13 +64,13 @@ cdef double[:,:] leapfrog(double[:,:] acc, double[:,:] vel, double[:,:] pos, dou
 
   for i in range(N):
       # second kick
-      vel[i,0] += acc[i,0] * dt/2.0
-      vel[i,1] += acc[i,1] * dt/2.0
-      vel[i,2] += acc[i,2] * dt/2.0
+      vel[i,0] += acc[i,0] * (dt/2.0)
+      vel[i,1] += acc[i,1] * (dt/2.0)
+      vel[i,2] += acc[i,2] * (dt/2.0)
 
-  return pos
+  return acc
 
-def simulate(double[:,:] pos, double[:,:] mass, double[:,:] vel, float G, int N, double dt, float t_max, float soft_param):
+cpdef simulate(double[:,:] pos, double[:,:] mass, double[:,:] vel, float G, int N, double dt, float t_max, float soft_param):
     '''
     Calculate values for simulation
     '''
@@ -81,7 +88,7 @@ def simulate(double[:,:] pos, double[:,:] mass, double[:,:] vel, float G, int N,
     cdef float t = 0
     cdef Py_ssize_t i
     for i in range(steps):
-        pos = leapfrog(acc, vel, pos, mass, soft_param, G, dt)
+        acc = leapfrog(acc, vel, pos, mass, soft_param, G, dt)
 
 	      # new time
         t += dt

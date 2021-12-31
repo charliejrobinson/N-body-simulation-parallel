@@ -26,18 +26,38 @@ from matplotlib.animation import FuncAnimation
 import timeit
 import argparse
 
+# TODO remove
+np.set_printoptions(precision=8)
+
+simulations = ['python', 'cython', 'python_original', 'python_sqrt', 'chris', 'python_without_numpy', 'cython_without_numpy']
+
 parser = argparse.ArgumentParser(description='Gravity Simulator')
-parser.add_argument('--simulation', type=str, nargs='*', default=[], choices=['python', 'cython', 'python_original', 'python_sqrt', 'chris', 'without_numpy', 'cython_without_numpy'], help='Which simulation to use')
-parser.add_argument('--animate', action='store_true', help='plot animated graphs')
-parser.add_argument('--plot_start', action='store_true', help='plots start graph')
-parser.add_argument('--plot_end', action='store_true', help='plots end graph')
-parser.add_argument('--stats', action='store_true', help='plots stats')
-parser.add_argument('--record', action='store_true', help='record result to stats')
-parser.add_argument('--average_over', type=int, default=3, help='Number of runs to average over')
-parser.add_argument('--seed', type=int, default=17, help='random seed to use')
-parser.add_argument('--N', type=int, nargs='+', default=[3, 50, 100, 200, 400, 600, 800], help='number of particles')
-parser.add_argument('--dt', type=float, default=0.01, help='timestep')
-parser.add_argument('--t_max', type=float, default=10.0, help='how many seconds simulation runs for')
+
+parent_parser = argparse.ArgumentParser(add_help=False)
+parent_parser.add_argument('--seed', type=int, default=17, help='random seed to use')
+parent_parser.add_argument('--dt', type=float, default=0.01, help='timestep')
+parent_parser.add_argument('--t_max', type=float, default=10.0, help='how many seconds simulation runs for')
+parent_parser.add_argument('--simulation', type=str, nargs='*', default=[], choices=simulations, help='Which simulation to use')
+
+subparsers = parser.add_subparsers(dest='command')
+
+parser_run = subparsers.add_parser('run', help='Run simulations', parents=[parent_parser])
+parser_run.add_argument('--N', type=int, nargs='+', default=[50], help='number of particles')
+parser_run.add_argument('--animate', action='store_true', help='plot animated graphs')
+parser_run.add_argument('--plot_start', action='store_true', help='plots start graph')
+parser_run.add_argument('--plot_end', action='store_true', help='plots end graph')
+
+parser_profile = subparsers.add_parser('profile', help='Record stats for simulations', parents=[parent_parser])
+parser_profile.add_argument('--N', type=int, nargs='+', default=[3, 50, 100, 200, 400, 600, 800], help='number of particles')
+parser_profile.add_argument('--average_over', type=int, default=3, help='Number of runs to average over')
+
+parser_validate = subparsers.add_parser('validate', help='Validate a simulation is correct', parents=[parent_parser])
+parser_validate.add_argument('--N', type=int, nargs='+', default=[12], help='number of particles')
+parser_validate.add_argument('--validation_simulation', type=str, default='python_original', choices=simulations, help='Which simulation to use for validation')
+
+
+parser_stats = subparsers.add_parser('stats', help='Plot statistics')
+
 
 args = parser.parse_args()
 
@@ -53,7 +73,7 @@ def run_simulation(simulation, pos, mass, vel, G, N, dt, t_max, soft_param):
         pos_t = simulation_python_sqrt.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
     elif simulation == 'chris':
         pos_t = simulation_chris_final.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
-    elif simulation == 'without_numpy':
+    elif simulation == 'python_without_numpy':
         pos_t = simulation_python_without_numpy.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
     elif simulation == 'cython_without_numpy':
         pos_t = simulation_cython_without_numpy.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
@@ -64,12 +84,29 @@ def run_simulation(simulation, pos, mass, vel, G, N, dt, t_max, soft_param):
 
     return end-start, pos_t
 
-def plot_at_index(name, i, fps, pos_t, N, dt, t_max):
+def initialise_environment(seed, N):
+    np.random.seed(args.seed)
+
+    # ---------------------------------
+    # Initalise enviroment
+    pos  = np.random.randn(N,3).astype(np.double) # normally distributed positions
+    vel  = np.random.randn(N,3).astype(np.double) # normally distributed velocities
+    mass = np.ones((N,1)).astype(np.double) # particle mass is 1.0
+
+    vel -= np.mean(mass * vel, 0) / np.mean(mass) # convert to Center-of-Mass frame (??)
+
+    # setup initial heavy one
+    # pos[0] = [0,0,0]
+    # mass[0] = 1.0 * 10**(30)
+
+    return pos, vel, mass
+
+def plot_at_index(name, i, fps, pos_t, N, dt, t_max, simulation):
     t = i / fps
 
     fig = plt.figure(name, dpi=100)
     ax = fig.add_subplot(projection='3d')
-    title = ax.set_title('Gravity Simulator\n N=%i dt=%.2f t=%.2f t_max=%.2f' % (N, dt, t, t_max))
+    title = ax.set_title('Gravity Simulator - %s\n N=%i dt=%.2f t=%.2f t_max=%.2f' % (simulation, N, dt, t, t_max))
 
     scatter = ax.scatter(pos_t[:,0,i], pos_t[:,1,i], pos_t[:,2,i], s=1, marker='o')
 
@@ -82,9 +119,9 @@ def plot_at_index(name, i, fps, pos_t, N, dt, t_max):
 
     return fig, scatter, title
 
-def draw(i, title, fps, scatter, pos_t, N, dt, t_max):
+def draw(i, title, fps, scatter, pos_t, N, dt, t_max, simulation):
     t = i / fps
-    title.set_text('Gravity Simulator\nN=%i dt=%.2f t=%.2fs t_max=%.2fs' % (N, dt, t, t_max))
+    title.set_text('Gravity Simulator - %s \nN=%i dt=%.2f t=%.2fs t_max=%.2fs' % (simulation, N, dt, t, t_max))
 
     scatter._offsets3d = (pos_t[:,0,i], pos_t[:,1,i], pos_t[:,2,i])
 
@@ -92,82 +129,97 @@ def draw(i, title, fps, scatter, pos_t, N, dt, t_max):
 # Load stats
 stats = pickle.load(open('stats.p', 'rb'))
 
-# ---------------------------------
-# Initalise parameters
-np.random.seed(args.seed)
 
-dt = args.dt
-t_max = args.t_max
-
-G = 1 # 6.6743 * 10**(-11) # m^3/(kg*s^2)    # Gravitational Constant - G =
-soft_param = 1e-20    # softening parameter, what should this value be?
-
-# pos_offset = 20000 # TODO remove
 
 # ---------------------------------
 # Run simulation
-for simulation in args.simulation:
-    if simulation not in stats:
-        stats[simulation] = []
+if args.command in ['run', 'profile', 'validate']:
+    # ---------------------------------
+    # Initalise parameters
+    dt = args.dt
+    t_max = args.t_max
 
-    stat = {
-        'date': datetime.datetime.now(),
-        'dt': dt, 't_max': t_max, 'soft_param': soft_param,
-        'runs': {'N': [], 'duration': []},
-    }
+    G = 1 # 6.6743 * 10**(-11) # m^3/(kg*s^2)    # Gravitational Constant - G =
+    soft_param = 1e-5    # softening parameter, what should this value be?
 
-    for N in args.N:
-        durations = []
-        pos_t = None
-        for i in range(args.average_over):
-            # ---------------------------------
-            # Initalise enviroment
-            pos  = np.random.randn(N,3) # normally distributed positions
-            vel  = np.random.randn(N,3) # normally distributed velocities
-            mass = np.ones((N,1)) # particle mass is 1.0
+    # pos_offset = 20000 # TODO remove
 
-            vel -= np.mean(mass * vel, 0) / np.mean(mass) # convert to Center-of-Mass frame (??)
+    valid_pos_t = None
+    if args.command == 'validate':
+        pos, vel, mass = initialise_environment(args.seed, args.N[0])
+        _, valid_pos_t = run_simulation(args.validation_simulation, pos, mass, vel, G, args.N[0], dt, t_max, soft_param)
 
-            # setup initial heavy one
-            # pos[0] = [0,0,0]
-            # mass[0] = 1.0 * 10**(30)
+    for simulation in args.simulation:
+        if simulation not in stats:
+            stats[simulation] = []
 
-            duration, _pos_t = run_simulation(simulation, pos, mass, vel, G, N, dt, t_max, soft_param)
-            durations.append(duration)
-            pos_t = _pos_t
+        stat = {
+            'date': datetime.datetime.now(),
+            'dt': dt, 't_max': t_max, 'soft_param': soft_param,
+            'runs': {'N': [], 'duration': []},
+        }
 
-        duration = np.average(durations)
+        for N in args.N:
+            durations = []
+            pos_t = None
 
-        print('Executed %s simulation %i times with N=%i in average %.2fs' % (simulation,args.average_over,  N, duration))
-        stat['runs']['N'].append(N)
-        stat['runs']['duration'].append(duration)
+            runs = 1
+            if 'average_over' in args:
+                runs = args.average_over
 
-        # Draw graph
-        fps = (pos_t.shape[2]-1) / t_max
+            for i in range(runs):
+                pos, vel, mass = initialise_environment(args.seed, N)
 
-        if args.plot_start:
-            plot_at_index('Gravity Simulator - Start', 0, fps, pos_t, N, dt, t_max)
+                duration, pos_t = run_simulation(simulation, pos, mass, vel, G, N, dt, t_max, soft_param)
+                durations.append(duration)
 
-        if args.plot_end:
-            plot_at_index('Gravity Simulator - End', pos_t.shape[2]-1, fps, pos_t, N, dt, t_max)
+                if args.command == 'validate':
+                    if np.allclose(valid_pos_t, pos_t):
+                        print('VALID against %s for %i' % (args.validation_simulation, args.N[0]))
+                    else:
+                        # for i in range(len(valid_pos_t)):
+                        #     for j in range(len(valid_pos_t[i])):
+                        #         for k in range(len(valid_pos_t[i,j])):
+                        #             if not np.allclose(valid_pos_t[i,j,k], pos_t[i,j,k]):
+                        #                 print(i,j,k, valid_pos_t.dtype, valid_pos_t[i,j,k])
+                        #                 print(i,j,k, pos_t.dtype, pos_t[i,j,k])
+                        #                 break
+                        # print(valid_pos_t[-1])
+                        # print(pos_t[-1])
+                        print('*** INVALID against %s for %i' % (args.validation_simulation, args.N[0]))
 
-        if args.animate:
-            fig, scatter, title = plot_at_index('Gravity Simulator - Animated', 0, fps, pos_t, N, dt, t_max)
-            ani = matplotlib.animation.FuncAnimation(fig, draw, frames=pos_t.shape[2], fargs=(title, fps, scatter, pos_t, N, dt, t_max), interval=round(1000 / fps), repeat=False)
+            duration = np.average(durations)
 
-        plt.show()
+            print('Executed %s simulation %i times with N=%i in average %.2fs' % (simulation,runs,  N, duration))
+            stat['runs']['N'].append(N)
+            stat['runs']['duration'].append(duration)
 
-    stats[simulation].append(stat)
+            # Draw graph
+            fps = (pos_t.shape[2]-1) / t_max
+
+            if 'plot_start' in args and args.plot_start:
+                plot_at_index('Gravity Simulator - %s - Start' % simulation, 0, fps, pos_t, N, dt, t_max, simulation)
+
+            if 'plot_end' in args and args.plot_end:
+                plot_at_index('Gravity Simulator - %s - End' % simulation, pos_t.shape[2]-1, fps, pos_t, N, dt, t_max, simulation)
+
+            if 'animate' in args and args.animate:
+                fig, scatter, title = plot_at_index('Gravity Simulator - %s - Animated' % simulation, 0, fps, pos_t, N, dt, t_max, simulation)
+                ani = matplotlib.animation.FuncAnimation(fig, draw, frames=pos_t.shape[2], fargs=(title, fps, scatter, pos_t, N, dt, t_max, simulation), interval=round(1000 / fps), repeat=False)
+
+            plt.show()
+
+        stats[simulation].append(stat)
 
 # ---------------------------------
 # Write stats
-if args.record:
+if args.command == 'profile':
     print('Saving to stats.p')
     pickle.dump(stats, open('stats.p', 'wb'))
 
 # ---------------------------------
 
-if args.stats:
+if args.command in ['stats', 'profile']:
     for simulation_name, simulation_stats in stats.items():
         last_run = simulation_stats[-1]
         plt.plot(last_run['runs']['N'], last_run['runs']['duration'], marker='o', label=simulation_name)

@@ -2,7 +2,7 @@ import numpy as np
 from scipy.spatial.distance import pdist, squareform
 
 # TODO remove
-np.set_printoptions(precision=3)
+np.set_printoptions(precision=8)
 
 def calc_acc(G, pos, mass, soft_param):
     '''
@@ -27,8 +27,7 @@ def calc_acc(G, pos, mass, soft_param):
     dz = pdist(z)
 
     # matrix of inverse seperations cubed (1/r^3)
-    squared_distance = dx**2 + dy**2 + dz**2 + soft_param
-    inv_sep = ((1.0 / np.sqrt(squared_distance)) ** 3)
+    inv_sep = (dx**2 + dy**2 + dz**2 + soft_param**2)**(-1.5)
 
     dx2 = (x.T - x) * squareform(inv_sep)
     dy2 = (y.T - y) * squareform(inv_sep)
