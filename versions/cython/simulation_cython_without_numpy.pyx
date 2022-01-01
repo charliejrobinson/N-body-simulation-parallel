@@ -25,6 +25,7 @@ cdef void calc_acc(double[:,:] acc, float G, double[:,:] pos, double[:,:] mass, 
     cdef double inv_sep
     cdef double dx, dy, dz
 
+    # TODO fast array
     for i in range(N):
         # Zero the array
         # TODO will this change the vectorisation

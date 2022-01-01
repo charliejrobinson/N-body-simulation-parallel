@@ -12,6 +12,8 @@ import simulation_cython_without_numpy
 import simulation_cython_openmp
 #import simulation_cython
 
+import openmp_api_wraper
+
 import numpy as np
 import pickle
 import matplotlib
@@ -64,7 +66,8 @@ parser_stats = subparsers.add_parser('stats', help='Plot statistics')
 args = parser.parse_args()
 
 def run_simulation(threads, simulation, pos, mass, vel, G, N, dt, t_max, soft_param):
-    start = timeit.default_timer()
+    # start = timeit.default_timer()
+    start = openmp_api_wraper.get_wtime()
 
     pos_t = None
     if simulation == 'python':
@@ -84,7 +87,8 @@ def run_simulation(threads, simulation, pos, mass, vel, G, N, dt, t_max, soft_pa
     elif simulation == 'cython':
         pass # pos_t = simulation_cython.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
 
-    end = timeit.default_timer()
+    # end = timeit.default_timer()
+    end = openmp_api_wraper.get_wtime()
 
     return end-start, pos_t
 
@@ -132,8 +136,6 @@ def draw(i, title, fps, scatter, pos_t, N, dt, t_max, simulation):
 # ---------------------------------
 # Load stats
 stats = pickle.load(open('stats.p', 'rb'))
-
-
 
 # ---------------------------------
 # Run simulation

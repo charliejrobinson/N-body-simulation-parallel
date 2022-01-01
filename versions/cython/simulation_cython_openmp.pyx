@@ -23,9 +23,10 @@ cdef void calc_acc(int threads, double[:,:] acc, float G, double[:,:] pos, doubl
     cdef double x1, y1, z1, x2, yz, z2
     cdef int N = pos.shape[0]
     cdef double inv_sep
+    cdef double temp
     cdef double dx, dy, dz
 
-    for i in prange(N, nogil=True, num_threads=threads):
+    for i in prange(N, nogil=True, num_threads=threads, schedule='static'):
         # Zero the array
         # TODO will this change the vectorisation
         acc[i,0] = 0
@@ -40,17 +41,18 @@ cdef void calc_acc(int threads, double[:,:] acc, float G, double[:,:] pos, doubl
 
             # matrix of inverse seperations cubed (1/r^3)
             inv_sep = (dx**2 + dy**2 + dz**2 + soft_param**2)**(-1.5)
+            temp = G * inv_sep * mass[j][0]
 
             # calculate acceleration components
-            acc[i,0] += G * (dx * inv_sep) * mass[j][0]
-            acc[i,1] += G * (dy * inv_sep) * mass[j][0]
-            acc[i,2] += G * (dz * inv_sep) * mass[j][0]
+            acc[i,0] += temp * dx
+            acc[i,1] += temp * dy
+            acc[i,2] += temp * dz
 
 cdef void leapfrog(int threads, double[:,:] acc, double[:,:] vel, double[:,:] pos, double[:,:] mass, float soft_param, float G, double dt):
   cdef int N = pos.shape[0]
   cdef Py_ssize_t i
 
-  for i in range(N):
+  for i in prange(N, nogil=True, num_threads=threads, schedule='static'):
       # first kick
       vel[i,0] += acc[i,0] * (dt/2.0)
       vel[i,1] += acc[i,1] * (dt/2.0)
@@ -64,7 +66,7 @@ cdef void leapfrog(int threads, double[:,:] acc, double[:,:] vel, double[:,:] po
   # recalculate accelerations
   calc_acc(threads, acc, G, pos, mass, soft_param)
 
-  for i in range(N):
+  for i in prange(N, nogil=True, num_threads=threads, schedule='static'):
       # second kick
       vel[i,0] += acc[i,0] * (dt/2.0)
       vel[i,1] += acc[i,1] * (dt/2.0)

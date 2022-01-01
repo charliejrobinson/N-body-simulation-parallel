@@ -7,7 +7,9 @@
         "extra_compile_args": [
             "-fopenmp",
             "-O3",
-            "-ffast-math"
+            "-ffast-math",
+            "-ftree-vectorize",
+            "-funroll-loops"
         ],
         "extra_link_args": [
             "-fopenmp"
@@ -701,7 +703,6 @@ static CYTHON_INLINE float __PYX_NAN() {
 #define __PYX_HAVE_API__simulation_cython_openmp
 /* Early includes */
 #include <omp.h>
-#include <math.h>
 #include "pythread.h"
 #include <string.h>
 #include <stdlib.h>
@@ -1789,8 +1790,6 @@ static PyObject *__pyx_memoryviewslice_assign_item_from_object(struct __pyx_memo
 
 /* Module declarations from 'openmp' */
 
-/* Module declarations from 'libc.math' */
-
 /* Module declarations from 'simulation_cython_openmp' */
 static PyTypeObject *__pyx_array_type = 0;
 static PyTypeObject *__pyx_MemviewEnum_type = 0;
@@ -2135,7 +2134,7 @@ static PyObject *__pyx_codeobj__25;
 /* Late includes */
 
 /* "simulation_cython_openmp.pyx":10
- * from libc.math cimport sqrt
+ * # from libc.math cimport sqrt
  * 
  * cdef void calc_acc(int threads, double[:,:] acc, float G, double[:,:] pos, double[:,:] mass, float soft_param):             # <<<<<<<<<<<<<<
  *     '''
@@ -2147,6 +2146,7 @@ static void __pyx_f_24simulation_cython_openmp_calc_acc(CYTHON_UNUSED int __pyx_
   Py_ssize_t __pyx_v_j;
   int __pyx_v_N;
   double __pyx_v_inv_sep;
+  double __pyx_v_temp;
   double __pyx_v_dx;
   double __pyx_v_dy;
   double __pyx_v_dz;
@@ -2168,14 +2168,14 @@ static void __pyx_f_24simulation_cython_openmp_calc_acc(CYTHON_UNUSED int __pyx_
  *     cdef double x1, y1, z1, x2, yz, z2
  *     cdef int N = pos.shape[0]             # <<<<<<<<<<<<<<
  *     cdef double inv_sep
- *     cdef double dx, dy, dz
+ *     cdef double temp
  */
   __pyx_v_N = (__pyx_v_pos.shape[0]);
 
-  /* "simulation_cython_openmp.pyx":28
+  /* "simulation_cython_openmp.pyx":29
  *     cdef double dx, dy, dz
  * 
- *     for i in prange(N, nogil=True, num_threads=threads):             # <<<<<<<<<<<<<<
+ *     for i in prange(N, nogil=True, num_threads=threads, schedule='static'):             # <<<<<<<<<<<<<<
  *         # Zero the array
  *         # TODO will this change the vectorisation
  */
@@ -2203,7 +2203,7 @@ static void __pyx_f_24simulation_cython_openmp_calc_acc(CYTHON_UNUSED int __pyx_
                 #endif /* _OPENMP */
                 {
                     #ifdef _OPENMP
-                    #pragma omp for lastprivate(__pyx_v_dx) lastprivate(__pyx_v_dy) lastprivate(__pyx_v_dz) firstprivate(__pyx_v_i) lastprivate(__pyx_v_i) lastprivate(__pyx_v_inv_sep) lastprivate(__pyx_v_j)
+                    #pragma omp for lastprivate(__pyx_v_dx) lastprivate(__pyx_v_dy) lastprivate(__pyx_v_dz) firstprivate(__pyx_v_i) lastprivate(__pyx_v_i) lastprivate(__pyx_v_inv_sep) lastprivate(__pyx_v_j) lastprivate(__pyx_v_temp) schedule(static)
                     #endif /* _OPENMP */
                     for (__pyx_t_2 = 0; __pyx_t_2 < __pyx_t_3; __pyx_t_2++){
                         {
@@ -2214,8 +2214,9 @@ static void __pyx_f_24simulation_cython_openmp_calc_acc(CYTHON_UNUSED int __pyx_
                             __pyx_v_dz = ((double)__PYX_NAN());
                             __pyx_v_inv_sep = ((double)__PYX_NAN());
                             __pyx_v_j = ((Py_ssize_t)0xbad0bad0);
+                            __pyx_v_temp = ((double)__PYX_NAN());
 
-                            /* "simulation_cython_openmp.pyx":31
+                            /* "simulation_cython_openmp.pyx":32
  *         # Zero the array
  *         # TODO will this change the vectorisation
  *         acc[i,0] = 0             # <<<<<<<<<<<<<<
@@ -2226,7 +2227,7 @@ static void __pyx_f_24simulation_cython_openmp_calc_acc(CYTHON_UNUSED int __pyx_
                             __pyx_t_5 = 0;
                             *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_4 * __pyx_v_acc.strides[0]) ) + __pyx_t_5 * __pyx_v_acc.strides[1]) )) = 0.0;
 
-                            /* "simulation_cython_openmp.pyx":32
+                            /* "simulation_cython_openmp.pyx":33
  *         # TODO will this change the vectorisation
  *         acc[i,0] = 0
  *         acc[i,1] = 0             # <<<<<<<<<<<<<<
@@ -2237,7 +2238,7 @@ static void __pyx_f_24simulation_cython_openmp_calc_acc(CYTHON_UNUSED int __pyx_
                             __pyx_t_4 = 1;
                             *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_5 * __pyx_v_acc.strides[0]) ) + __pyx_t_4 * __pyx_v_acc.strides[1]) )) = 0.0;
 
-                            /* "simulation_cython_openmp.pyx":33
+                            /* "simulation_cython_openmp.pyx":34
  *         acc[i,0] = 0
  *         acc[i,1] = 0
  *         acc[i,2] = 0             # <<<<<<<<<<<<<<
@@ -2248,7 +2249,7 @@ static void __pyx_f_24simulation_cython_openmp_calc_acc(CYTHON_UNUSED int __pyx_
                             __pyx_t_5 = 2;
                             *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_4 * __pyx_v_acc.strides[0]) ) + __pyx_t_5 * __pyx_v_acc.strides[1]) )) = 0.0;
 
-                            /* "simulation_cython_openmp.pyx":35
+                            /* "simulation_cython_openmp.pyx":36
  *         acc[i,2] = 0
  * 
  *         for j in range(N):             # <<<<<<<<<<<<<<
@@ -2260,7 +2261,7 @@ static void __pyx_f_24simulation_cython_openmp_calc_acc(CYTHON_UNUSED int __pyx_
                             for (__pyx_t_8 = 0; __pyx_t_8 < __pyx_t_7; __pyx_t_8+=1) {
                               __pyx_v_j = __pyx_t_8;
 
-                              /* "simulation_cython_openmp.pyx":37
+                              /* "simulation_cython_openmp.pyx":38
  *         for j in range(N):
  *             # calculate particle seperations
  *             dx = pos[j,0] - pos[i,0]             # <<<<<<<<<<<<<<
@@ -2273,7 +2274,7 @@ static void __pyx_f_24simulation_cython_openmp_calc_acc(CYTHON_UNUSED int __pyx_
                               __pyx_t_10 = 0;
                               __pyx_v_dx = ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_pos.data + __pyx_t_5 * __pyx_v_pos.strides[0]) ) + __pyx_t_4 * __pyx_v_pos.strides[1]) ))) - (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_pos.data + __pyx_t_9 * __pyx_v_pos.strides[0]) ) + __pyx_t_10 * __pyx_v_pos.strides[1]) ))));
 
-                              /* "simulation_cython_openmp.pyx":38
+                              /* "simulation_cython_openmp.pyx":39
  *             # calculate particle seperations
  *             dx = pos[j,0] - pos[i,0]
  *             dy = pos[j,1] - pos[i,1]             # <<<<<<<<<<<<<<
@@ -2286,7 +2287,7 @@ static void __pyx_f_24simulation_cython_openmp_calc_acc(CYTHON_UNUSED int __pyx_
                               __pyx_t_5 = 1;
                               __pyx_v_dy = ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_pos.data + __pyx_t_10 * __pyx_v_pos.strides[0]) ) + __pyx_t_9 * __pyx_v_pos.strides[1]) ))) - (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_pos.data + __pyx_t_4 * __pyx_v_pos.strides[0]) ) + __pyx_t_5 * __pyx_v_pos.strides[1]) ))));
 
-                              /* "simulation_cython_openmp.pyx":39
+                              /* "simulation_cython_openmp.pyx":40
  *             dx = pos[j,0] - pos[i,0]
  *             dy = pos[j,1] - pos[i,1]
  *             dz = pos[j,2] - pos[i,2]             # <<<<<<<<<<<<<<
@@ -2300,52 +2301,57 @@ static void __pyx_f_24simulation_cython_openmp_calc_acc(CYTHON_UNUSED int __pyx_
                               __pyx_v_dz = ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_pos.data + __pyx_t_5 * __pyx_v_pos.strides[0]) ) + __pyx_t_4 * __pyx_v_pos.strides[1]) ))) - (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_pos.data + __pyx_t_9 * __pyx_v_pos.strides[0]) ) + __pyx_t_10 * __pyx_v_pos.strides[1]) ))));
 
                               /* "simulation_cython_openmp.pyx":43
+ * 
  *             # matrix of inverse seperations cubed (1/r^3)
- *             # inv_sep = (dx**2 + dy**2 + dz**2 + soft_param**2)**(-1.5)
- *             inv_sep = 1.0 / sqrt((dx**2 + dy**2 + dz**2 + soft_param**2)**3)             # <<<<<<<<<<<<<<
+ *             inv_sep = (dx**2 + dy**2 + dz**2 + soft_param**2)**(-1.5)             # <<<<<<<<<<<<<<
+ *             temp = G * inv_sep * mass[j][0]
  * 
- *             # calculate acceleration components
  */
-                              __pyx_v_inv_sep = (1.0 / sqrt(pow((((pow(__pyx_v_dx, 2.0) + pow(__pyx_v_dy, 2.0)) + pow(__pyx_v_dz, 2.0)) + powf(__pyx_v_soft_param, 2.0)), 3.0)));
+                              __pyx_v_inv_sep = pow((((pow(__pyx_v_dx, 2.0) + pow(__pyx_v_dy, 2.0)) + pow(__pyx_v_dz, 2.0)) + powf(__pyx_v_soft_param, 2.0)), -1.5);
 
-                              /* "simulation_cython_openmp.pyx":46
+                              /* "simulation_cython_openmp.pyx":44
+ *             # matrix of inverse seperations cubed (1/r^3)
+ *             inv_sep = (dx**2 + dy**2 + dz**2 + soft_param**2)**(-1.5)
+ *             temp = G * inv_sep * mass[j][0]             # <<<<<<<<<<<<<<
  * 
  *             # calculate acceleration components
- *             acc[i,0] += G * (dx * inv_sep) * mass[j][0]             # <<<<<<<<<<<<<<
- *             acc[i,1] += G * (dy * inv_sep) * mass[j][0]
- *             acc[i,2] += G * (dz * inv_sep) * mass[j][0]
  */
                               __pyx_t_10 = __pyx_v_j;
                               __pyx_t_9 = 0;
-                              __pyx_t_4 = __pyx_v_i;
-                              __pyx_t_5 = 0;
-                              *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_4 * __pyx_v_acc.strides[0]) ) + __pyx_t_5 * __pyx_v_acc.strides[1]) )) += ((__pyx_v_G * (__pyx_v_dx * __pyx_v_inv_sep)) * (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_mass.data + __pyx_t_10 * __pyx_v_mass.strides[0]) ) + __pyx_t_9 * __pyx_v_mass.strides[1]) ))));
+                              __pyx_v_temp = ((__pyx_v_G * __pyx_v_inv_sep) * (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_mass.data + __pyx_t_10 * __pyx_v_mass.strides[0]) ) + __pyx_t_9 * __pyx_v_mass.strides[1]) ))));
 
                               /* "simulation_cython_openmp.pyx":47
- *             # calculate acceleration components
- *             acc[i,0] += G * (dx * inv_sep) * mass[j][0]
- *             acc[i,1] += G * (dy * inv_sep) * mass[j][0]             # <<<<<<<<<<<<<<
- *             acc[i,2] += G * (dz * inv_sep) * mass[j][0]
  * 
+ *             # calculate acceleration components
+ *             acc[i,0] += temp * dx             # <<<<<<<<<<<<<<
+ *             acc[i,1] += temp * dy
+ *             acc[i,2] += temp * dz
  */
-                              __pyx_t_9 = __pyx_v_j;
+                              __pyx_t_9 = __pyx_v_i;
                               __pyx_t_10 = 0;
-                              __pyx_t_5 = __pyx_v_i;
-                              __pyx_t_4 = 1;
-                              *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_5 * __pyx_v_acc.strides[0]) ) + __pyx_t_4 * __pyx_v_acc.strides[1]) )) += ((__pyx_v_G * (__pyx_v_dy * __pyx_v_inv_sep)) * (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_mass.data + __pyx_t_9 * __pyx_v_mass.strides[0]) ) + __pyx_t_10 * __pyx_v_mass.strides[1]) ))));
+                              *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_9 * __pyx_v_acc.strides[0]) ) + __pyx_t_10 * __pyx_v_acc.strides[1]) )) += (__pyx_v_temp * __pyx_v_dx);
 
                               /* "simulation_cython_openmp.pyx":48
- *             acc[i,0] += G * (dx * inv_sep) * mass[j][0]
- *             acc[i,1] += G * (dy * inv_sep) * mass[j][0]
- *             acc[i,2] += G * (dz * inv_sep) * mass[j][0]             # <<<<<<<<<<<<<<
+ *             # calculate acceleration components
+ *             acc[i,0] += temp * dx
+ *             acc[i,1] += temp * dy             # <<<<<<<<<<<<<<
+ *             acc[i,2] += temp * dz
+ * 
+ */
+                              __pyx_t_10 = __pyx_v_i;
+                              __pyx_t_9 = 1;
+                              *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_10 * __pyx_v_acc.strides[0]) ) + __pyx_t_9 * __pyx_v_acc.strides[1]) )) += (__pyx_v_temp * __pyx_v_dy);
+
+                              /* "simulation_cython_openmp.pyx":49
+ *             acc[i,0] += temp * dx
+ *             acc[i,1] += temp * dy
+ *             acc[i,2] += temp * dz             # <<<<<<<<<<<<<<
  * 
  * cdef void leapfrog(int threads, double[:,:] acc, double[:,:] vel, double[:,:] pos, double[:,:] mass, float soft_param, float G, double dt):
  */
-                              __pyx_t_10 = __pyx_v_j;
-                              __pyx_t_9 = 0;
-                              __pyx_t_4 = __pyx_v_i;
-                              __pyx_t_5 = 2;
-                              *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_4 * __pyx_v_acc.strides[0]) ) + __pyx_t_5 * __pyx_v_acc.strides[1]) )) += ((__pyx_v_G * (__pyx_v_dz * __pyx_v_inv_sep)) * (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_mass.data + __pyx_t_10 * __pyx_v_mass.strides[0]) ) + __pyx_t_9 * __pyx_v_mass.strides[1]) ))));
+                              __pyx_t_9 = __pyx_v_i;
+                              __pyx_t_10 = 2;
+                              *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_9 * __pyx_v_acc.strides[0]) ) + __pyx_t_10 * __pyx_v_acc.strides[1]) )) += (__pyx_v_temp * __pyx_v_dz);
                             }
                         }
                     }
@@ -2360,10 +2366,10 @@ static void __pyx_f_24simulation_cython_openmp_calc_acc(CYTHON_UNUSED int __pyx_
         #endif
       }
 
-      /* "simulation_cython_openmp.pyx":28
+      /* "simulation_cython_openmp.pyx":29
  *     cdef double dx, dy, dz
  * 
- *     for i in prange(N, nogil=True, num_threads=threads):             # <<<<<<<<<<<<<<
+ *     for i in prange(N, nogil=True, num_threads=threads, schedule='static'):             # <<<<<<<<<<<<<<
  *         # Zero the array
  *         # TODO will this change the vectorisation
  */
@@ -2380,7 +2386,7 @@ static void __pyx_f_24simulation_cython_openmp_calc_acc(CYTHON_UNUSED int __pyx_
   }
 
   /* "simulation_cython_openmp.pyx":10
- * from libc.math cimport sqrt
+ * # from libc.math cimport sqrt
  * 
  * cdef void calc_acc(int threads, double[:,:] acc, float G, double[:,:] pos, double[:,:] mass, float soft_param):             # <<<<<<<<<<<<<<
  *     '''
@@ -2391,8 +2397,8 @@ static void __pyx_f_24simulation_cython_openmp_calc_acc(CYTHON_UNUSED int __pyx_
   __Pyx_RefNannyFinishContext();
 }
 
-/* "simulation_cython_openmp.pyx":50
- *             acc[i,2] += G * (dz * inv_sep) * mass[j][0]
+/* "simulation_cython_openmp.pyx":51
+ *             acc[i,2] += temp * dz
  * 
  * cdef void leapfrog(int threads, double[:,:] acc, double[:,:] vel, double[:,:] pos, double[:,:] mass, float soft_param, float G, double dt):             # <<<<<<<<<<<<<<
  *   cdef int N = pos.shape[0]
@@ -2400,11 +2406,11 @@ static void __pyx_f_24simulation_cython_openmp_calc_acc(CYTHON_UNUSED int __pyx_
  */
 
 static void __pyx_f_24simulation_cython_openmp_leapfrog(int __pyx_v_threads, __Pyx_memviewslice __pyx_v_acc, __Pyx_memviewslice __pyx_v_vel, __Pyx_memviewslice __pyx_v_pos, __Pyx_memviewslice __pyx_v_mass, float __pyx_v_soft_param, float __pyx_v_G, double __pyx_v_dt) {
-  int __pyx_v_N;
+  CYTHON_UNUSED int __pyx_v_N;
   Py_ssize_t __pyx_v_i;
   __Pyx_RefNannyDeclarations
   int __pyx_t_1;
-  int __pyx_t_2;
+  Py_ssize_t __pyx_t_2;
   Py_ssize_t __pyx_t_3;
   Py_ssize_t __pyx_t_4;
   Py_ssize_t __pyx_t_5;
@@ -2412,7 +2418,7 @@ static void __pyx_f_24simulation_cython_openmp_leapfrog(int __pyx_v_threads, __P
   Py_ssize_t __pyx_t_7;
   __Pyx_RefNannySetupContext("leapfrog", 0);
 
-  /* "simulation_cython_openmp.pyx":51
+  /* "simulation_cython_openmp.pyx":52
  * 
  * cdef void leapfrog(int threads, double[:,:] acc, double[:,:] vel, double[:,:] pos, double[:,:] mass, float soft_param, float G, double dt):
  *   cdef int N = pos.shape[0]             # <<<<<<<<<<<<<<
@@ -2421,160 +2427,270 @@ static void __pyx_f_24simulation_cython_openmp_leapfrog(int __pyx_v_threads, __P
  */
   __pyx_v_N = (__pyx_v_pos.shape[0]);
 
-  /* "simulation_cython_openmp.pyx":54
+  /* "simulation_cython_openmp.pyx":55
  *   cdef Py_ssize_t i
  * 
- *   for i in range(N):             # <<<<<<<<<<<<<<
+ *   for i in prange(N, nogil=True, num_threads=threads, schedule='static'):             # <<<<<<<<<<<<<<
  *       # first kick
  *       vel[i,0] += acc[i,0] * (dt/2.0)
  */
-  __pyx_t_1 = __pyx_v_N;
-  __pyx_t_2 = __pyx_t_1;
-  for (__pyx_t_3 = 0; __pyx_t_3 < __pyx_t_2; __pyx_t_3+=1) {
-    __pyx_v_i = __pyx_t_3;
+  {
+      #ifdef WITH_THREAD
+      PyThreadState *_save;
+      Py_UNBLOCK_THREADS
+      __Pyx_FastGIL_Remember();
+      #endif
+      /*try:*/ {
+        __pyx_t_1 = __pyx_v_N;
+        if ((1 == 0)) abort();
+        {
+            #if ((defined(__APPLE__) || defined(__OSX__)) && (defined(__GNUC__) && (__GNUC__ > 2 || (__GNUC__ == 2 && (__GNUC_MINOR__ > 95)))))
+                #undef likely
+                #undef unlikely
+                #define likely(x)   (x)
+                #define unlikely(x) (x)
+            #endif
+            __pyx_t_3 = (__pyx_t_1 - 0 + 1 - 1/abs(1)) / 1;
+            if (__pyx_t_3 > 0)
+            {
+                #ifdef _OPENMP
+                #pragma omp parallel num_threads(__pyx_v_threads) private(__pyx_t_4, __pyx_t_5, __pyx_t_6, __pyx_t_7)
+                #endif /* _OPENMP */
+                {
+                    #ifdef _OPENMP
+                    #pragma omp for firstprivate(__pyx_v_i) lastprivate(__pyx_v_i) schedule(static)
+                    #endif /* _OPENMP */
+                    for (__pyx_t_2 = 0; __pyx_t_2 < __pyx_t_3; __pyx_t_2++){
+                        {
+                            __pyx_v_i = (Py_ssize_t)(0 + 1 * __pyx_t_2);
 
-    /* "simulation_cython_openmp.pyx":56
- *   for i in range(N):
+                            /* "simulation_cython_openmp.pyx":57
+ *   for i in prange(N, nogil=True, num_threads=threads, schedule='static'):
  *       # first kick
  *       vel[i,0] += acc[i,0] * (dt/2.0)             # <<<<<<<<<<<<<<
  *       vel[i,1] += acc[i,1] * (dt/2.0)
  *       vel[i,2] += acc[i,2] * (dt/2.0)
  */
-    __pyx_t_4 = __pyx_v_i;
-    __pyx_t_5 = 0;
-    __pyx_t_6 = __pyx_v_i;
-    __pyx_t_7 = 0;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_vel.data + __pyx_t_6 * __pyx_v_vel.strides[0]) ) + __pyx_t_7 * __pyx_v_vel.strides[1]) )) += ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_4 * __pyx_v_acc.strides[0]) ) + __pyx_t_5 * __pyx_v_acc.strides[1]) ))) * (__pyx_v_dt / 2.0));
+                            __pyx_t_4 = __pyx_v_i;
+                            __pyx_t_5 = 0;
+                            __pyx_t_6 = __pyx_v_i;
+                            __pyx_t_7 = 0;
+                            *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_vel.data + __pyx_t_6 * __pyx_v_vel.strides[0]) ) + __pyx_t_7 * __pyx_v_vel.strides[1]) )) += ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_4 * __pyx_v_acc.strides[0]) ) + __pyx_t_5 * __pyx_v_acc.strides[1]) ))) * (__pyx_v_dt / 2.0));
 
-    /* "simulation_cython_openmp.pyx":57
+                            /* "simulation_cython_openmp.pyx":58
  *       # first kick
  *       vel[i,0] += acc[i,0] * (dt/2.0)
  *       vel[i,1] += acc[i,1] * (dt/2.0)             # <<<<<<<<<<<<<<
  *       vel[i,2] += acc[i,2] * (dt/2.0)
  * 
  */
-    __pyx_t_5 = __pyx_v_i;
-    __pyx_t_4 = 1;
-    __pyx_t_7 = __pyx_v_i;
-    __pyx_t_6 = 1;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_vel.data + __pyx_t_7 * __pyx_v_vel.strides[0]) ) + __pyx_t_6 * __pyx_v_vel.strides[1]) )) += ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_5 * __pyx_v_acc.strides[0]) ) + __pyx_t_4 * __pyx_v_acc.strides[1]) ))) * (__pyx_v_dt / 2.0));
+                            __pyx_t_5 = __pyx_v_i;
+                            __pyx_t_4 = 1;
+                            __pyx_t_7 = __pyx_v_i;
+                            __pyx_t_6 = 1;
+                            *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_vel.data + __pyx_t_7 * __pyx_v_vel.strides[0]) ) + __pyx_t_6 * __pyx_v_vel.strides[1]) )) += ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_5 * __pyx_v_acc.strides[0]) ) + __pyx_t_4 * __pyx_v_acc.strides[1]) ))) * (__pyx_v_dt / 2.0));
 
-    /* "simulation_cython_openmp.pyx":58
+                            /* "simulation_cython_openmp.pyx":59
  *       vel[i,0] += acc[i,0] * (dt/2.0)
  *       vel[i,1] += acc[i,1] * (dt/2.0)
  *       vel[i,2] += acc[i,2] * (dt/2.0)             # <<<<<<<<<<<<<<
  * 
  *       # drift
  */
-    __pyx_t_4 = __pyx_v_i;
-    __pyx_t_5 = 2;
-    __pyx_t_6 = __pyx_v_i;
-    __pyx_t_7 = 2;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_vel.data + __pyx_t_6 * __pyx_v_vel.strides[0]) ) + __pyx_t_7 * __pyx_v_vel.strides[1]) )) += ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_4 * __pyx_v_acc.strides[0]) ) + __pyx_t_5 * __pyx_v_acc.strides[1]) ))) * (__pyx_v_dt / 2.0));
+                            __pyx_t_4 = __pyx_v_i;
+                            __pyx_t_5 = 2;
+                            __pyx_t_6 = __pyx_v_i;
+                            __pyx_t_7 = 2;
+                            *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_vel.data + __pyx_t_6 * __pyx_v_vel.strides[0]) ) + __pyx_t_7 * __pyx_v_vel.strides[1]) )) += ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_4 * __pyx_v_acc.strides[0]) ) + __pyx_t_5 * __pyx_v_acc.strides[1]) ))) * (__pyx_v_dt / 2.0));
 
-    /* "simulation_cython_openmp.pyx":61
+                            /* "simulation_cython_openmp.pyx":62
  * 
  *       # drift
  *       pos[i,0] += vel[i,0] * dt             # <<<<<<<<<<<<<<
  *       pos[i,1] += vel[i,1] * dt
  *       pos[i,2] += vel[i,2] * dt
  */
-    __pyx_t_5 = __pyx_v_i;
-    __pyx_t_4 = 0;
-    __pyx_t_7 = __pyx_v_i;
-    __pyx_t_6 = 0;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_pos.data + __pyx_t_7 * __pyx_v_pos.strides[0]) ) + __pyx_t_6 * __pyx_v_pos.strides[1]) )) += ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_vel.data + __pyx_t_5 * __pyx_v_vel.strides[0]) ) + __pyx_t_4 * __pyx_v_vel.strides[1]) ))) * __pyx_v_dt);
+                            __pyx_t_5 = __pyx_v_i;
+                            __pyx_t_4 = 0;
+                            __pyx_t_7 = __pyx_v_i;
+                            __pyx_t_6 = 0;
+                            *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_pos.data + __pyx_t_7 * __pyx_v_pos.strides[0]) ) + __pyx_t_6 * __pyx_v_pos.strides[1]) )) += ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_vel.data + __pyx_t_5 * __pyx_v_vel.strides[0]) ) + __pyx_t_4 * __pyx_v_vel.strides[1]) ))) * __pyx_v_dt);
 
-    /* "simulation_cython_openmp.pyx":62
+                            /* "simulation_cython_openmp.pyx":63
  *       # drift
  *       pos[i,0] += vel[i,0] * dt
  *       pos[i,1] += vel[i,1] * dt             # <<<<<<<<<<<<<<
  *       pos[i,2] += vel[i,2] * dt
  * 
  */
-    __pyx_t_4 = __pyx_v_i;
-    __pyx_t_5 = 1;
-    __pyx_t_6 = __pyx_v_i;
-    __pyx_t_7 = 1;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_pos.data + __pyx_t_6 * __pyx_v_pos.strides[0]) ) + __pyx_t_7 * __pyx_v_pos.strides[1]) )) += ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_vel.data + __pyx_t_4 * __pyx_v_vel.strides[0]) ) + __pyx_t_5 * __pyx_v_vel.strides[1]) ))) * __pyx_v_dt);
+                            __pyx_t_4 = __pyx_v_i;
+                            __pyx_t_5 = 1;
+                            __pyx_t_6 = __pyx_v_i;
+                            __pyx_t_7 = 1;
+                            *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_pos.data + __pyx_t_6 * __pyx_v_pos.strides[0]) ) + __pyx_t_7 * __pyx_v_pos.strides[1]) )) += ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_vel.data + __pyx_t_4 * __pyx_v_vel.strides[0]) ) + __pyx_t_5 * __pyx_v_vel.strides[1]) ))) * __pyx_v_dt);
 
-    /* "simulation_cython_openmp.pyx":63
+                            /* "simulation_cython_openmp.pyx":64
  *       pos[i,0] += vel[i,0] * dt
  *       pos[i,1] += vel[i,1] * dt
  *       pos[i,2] += vel[i,2] * dt             # <<<<<<<<<<<<<<
  * 
  *   # recalculate accelerations
  */
-    __pyx_t_5 = __pyx_v_i;
-    __pyx_t_4 = 2;
-    __pyx_t_7 = __pyx_v_i;
-    __pyx_t_6 = 2;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_pos.data + __pyx_t_7 * __pyx_v_pos.strides[0]) ) + __pyx_t_6 * __pyx_v_pos.strides[1]) )) += ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_vel.data + __pyx_t_5 * __pyx_v_vel.strides[0]) ) + __pyx_t_4 * __pyx_v_vel.strides[1]) ))) * __pyx_v_dt);
+                            __pyx_t_5 = __pyx_v_i;
+                            __pyx_t_4 = 2;
+                            __pyx_t_7 = __pyx_v_i;
+                            __pyx_t_6 = 2;
+                            *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_pos.data + __pyx_t_7 * __pyx_v_pos.strides[0]) ) + __pyx_t_6 * __pyx_v_pos.strides[1]) )) += ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_vel.data + __pyx_t_5 * __pyx_v_vel.strides[0]) ) + __pyx_t_4 * __pyx_v_vel.strides[1]) ))) * __pyx_v_dt);
+                        }
+                    }
+                }
+            }
+        }
+        #if ((defined(__APPLE__) || defined(__OSX__)) && (defined(__GNUC__) && (__GNUC__ > 2 || (__GNUC__ == 2 && (__GNUC_MINOR__ > 95)))))
+            #undef likely
+            #undef unlikely
+            #define likely(x)   __builtin_expect(!!(x), 1)
+            #define unlikely(x) __builtin_expect(!!(x), 0)
+        #endif
+      }
+
+      /* "simulation_cython_openmp.pyx":55
+ *   cdef Py_ssize_t i
+ * 
+ *   for i in prange(N, nogil=True, num_threads=threads, schedule='static'):             # <<<<<<<<<<<<<<
+ *       # first kick
+ *       vel[i,0] += acc[i,0] * (dt/2.0)
+ */
+      /*finally:*/ {
+        /*normal exit:*/{
+          #ifdef WITH_THREAD
+          __Pyx_FastGIL_Forget();
+          Py_BLOCK_THREADS
+          #endif
+          goto __pyx_L5;
+        }
+        __pyx_L5:;
+      }
   }
 
-  /* "simulation_cython_openmp.pyx":66
+  /* "simulation_cython_openmp.pyx":67
  * 
  *   # recalculate accelerations
  *   calc_acc(threads, acc, G, pos, mass, soft_param)             # <<<<<<<<<<<<<<
  * 
- *   for i in range(N):
+ *   for i in prange(N, nogil=True, num_threads=threads, schedule='static'):
  */
   __pyx_f_24simulation_cython_openmp_calc_acc(__pyx_v_threads, __pyx_v_acc, __pyx_v_G, __pyx_v_pos, __pyx_v_mass, __pyx_v_soft_param);
 
-  /* "simulation_cython_openmp.pyx":68
+  /* "simulation_cython_openmp.pyx":69
  *   calc_acc(threads, acc, G, pos, mass, soft_param)
  * 
- *   for i in range(N):             # <<<<<<<<<<<<<<
+ *   for i in prange(N, nogil=True, num_threads=threads, schedule='static'):             # <<<<<<<<<<<<<<
  *       # second kick
  *       vel[i,0] += acc[i,0] * (dt/2.0)
  */
-  __pyx_t_1 = __pyx_v_N;
-  __pyx_t_2 = __pyx_t_1;
-  for (__pyx_t_3 = 0; __pyx_t_3 < __pyx_t_2; __pyx_t_3+=1) {
-    __pyx_v_i = __pyx_t_3;
+  {
+      #ifdef WITH_THREAD
+      PyThreadState *_save;
+      Py_UNBLOCK_THREADS
+      __Pyx_FastGIL_Remember();
+      #endif
+      /*try:*/ {
+        __pyx_t_1 = __pyx_v_N;
+        if ((1 == 0)) abort();
+        {
+            #if ((defined(__APPLE__) || defined(__OSX__)) && (defined(__GNUC__) && (__GNUC__ > 2 || (__GNUC__ == 2 && (__GNUC_MINOR__ > 95)))))
+                #undef likely
+                #undef unlikely
+                #define likely(x)   (x)
+                #define unlikely(x) (x)
+            #endif
+            __pyx_t_2 = (__pyx_t_1 - 0 + 1 - 1/abs(1)) / 1;
+            if (__pyx_t_2 > 0)
+            {
+                #ifdef _OPENMP
+                #pragma omp parallel num_threads(__pyx_v_threads) private(__pyx_t_4, __pyx_t_5, __pyx_t_6, __pyx_t_7)
+                #endif /* _OPENMP */
+                {
+                    #ifdef _OPENMP
+                    #pragma omp for firstprivate(__pyx_v_i) lastprivate(__pyx_v_i) schedule(static)
+                    #endif /* _OPENMP */
+                    for (__pyx_t_3 = 0; __pyx_t_3 < __pyx_t_2; __pyx_t_3++){
+                        {
+                            __pyx_v_i = (Py_ssize_t)(0 + 1 * __pyx_t_3);
 
-    /* "simulation_cython_openmp.pyx":70
- *   for i in range(N):
+                            /* "simulation_cython_openmp.pyx":71
+ *   for i in prange(N, nogil=True, num_threads=threads, schedule='static'):
  *       # second kick
  *       vel[i,0] += acc[i,0] * (dt/2.0)             # <<<<<<<<<<<<<<
  *       vel[i,1] += acc[i,1] * (dt/2.0)
  *       vel[i,2] += acc[i,2] * (dt/2.0)
  */
-    __pyx_t_4 = __pyx_v_i;
-    __pyx_t_5 = 0;
-    __pyx_t_6 = __pyx_v_i;
-    __pyx_t_7 = 0;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_vel.data + __pyx_t_6 * __pyx_v_vel.strides[0]) ) + __pyx_t_7 * __pyx_v_vel.strides[1]) )) += ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_4 * __pyx_v_acc.strides[0]) ) + __pyx_t_5 * __pyx_v_acc.strides[1]) ))) * (__pyx_v_dt / 2.0));
+                            __pyx_t_4 = __pyx_v_i;
+                            __pyx_t_5 = 0;
+                            __pyx_t_6 = __pyx_v_i;
+                            __pyx_t_7 = 0;
+                            *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_vel.data + __pyx_t_6 * __pyx_v_vel.strides[0]) ) + __pyx_t_7 * __pyx_v_vel.strides[1]) )) += ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_4 * __pyx_v_acc.strides[0]) ) + __pyx_t_5 * __pyx_v_acc.strides[1]) ))) * (__pyx_v_dt / 2.0));
 
-    /* "simulation_cython_openmp.pyx":71
+                            /* "simulation_cython_openmp.pyx":72
  *       # second kick
  *       vel[i,0] += acc[i,0] * (dt/2.0)
  *       vel[i,1] += acc[i,1] * (dt/2.0)             # <<<<<<<<<<<<<<
  *       vel[i,2] += acc[i,2] * (dt/2.0)
  * 
  */
-    __pyx_t_5 = __pyx_v_i;
-    __pyx_t_4 = 1;
-    __pyx_t_7 = __pyx_v_i;
-    __pyx_t_6 = 1;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_vel.data + __pyx_t_7 * __pyx_v_vel.strides[0]) ) + __pyx_t_6 * __pyx_v_vel.strides[1]) )) += ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_5 * __pyx_v_acc.strides[0]) ) + __pyx_t_4 * __pyx_v_acc.strides[1]) ))) * (__pyx_v_dt / 2.0));
+                            __pyx_t_5 = __pyx_v_i;
+                            __pyx_t_4 = 1;
+                            __pyx_t_7 = __pyx_v_i;
+                            __pyx_t_6 = 1;
+                            *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_vel.data + __pyx_t_7 * __pyx_v_vel.strides[0]) ) + __pyx_t_6 * __pyx_v_vel.strides[1]) )) += ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_5 * __pyx_v_acc.strides[0]) ) + __pyx_t_4 * __pyx_v_acc.strides[1]) ))) * (__pyx_v_dt / 2.0));
 
-    /* "simulation_cython_openmp.pyx":72
+                            /* "simulation_cython_openmp.pyx":73
  *       vel[i,0] += acc[i,0] * (dt/2.0)
  *       vel[i,1] += acc[i,1] * (dt/2.0)
  *       vel[i,2] += acc[i,2] * (dt/2.0)             # <<<<<<<<<<<<<<
  * 
  * cpdef simulate(int threads, double[:,:] pos, double[:,:] mass, double[:,:] vel, float G, int N, double dt, float t_max, float soft_param):
  */
-    __pyx_t_4 = __pyx_v_i;
-    __pyx_t_5 = 2;
-    __pyx_t_6 = __pyx_v_i;
-    __pyx_t_7 = 2;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_vel.data + __pyx_t_6 * __pyx_v_vel.strides[0]) ) + __pyx_t_7 * __pyx_v_vel.strides[1]) )) += ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_4 * __pyx_v_acc.strides[0]) ) + __pyx_t_5 * __pyx_v_acc.strides[1]) ))) * (__pyx_v_dt / 2.0));
+                            __pyx_t_4 = __pyx_v_i;
+                            __pyx_t_5 = 2;
+                            __pyx_t_6 = __pyx_v_i;
+                            __pyx_t_7 = 2;
+                            *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_vel.data + __pyx_t_6 * __pyx_v_vel.strides[0]) ) + __pyx_t_7 * __pyx_v_vel.strides[1]) )) += ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_acc.data + __pyx_t_4 * __pyx_v_acc.strides[0]) ) + __pyx_t_5 * __pyx_v_acc.strides[1]) ))) * (__pyx_v_dt / 2.0));
+                        }
+                    }
+                }
+            }
+        }
+        #if ((defined(__APPLE__) || defined(__OSX__)) && (defined(__GNUC__) && (__GNUC__ > 2 || (__GNUC__ == 2 && (__GNUC_MINOR__ > 95)))))
+            #undef likely
+            #undef unlikely
+            #define likely(x)   __builtin_expect(!!(x), 1)
+            #define unlikely(x) __builtin_expect(!!(x), 0)
+        #endif
+      }
+
+      /* "simulation_cython_openmp.pyx":69
+ *   calc_acc(threads, acc, G, pos, mass, soft_param)
+ * 
+ *   for i in prange(N, nogil=True, num_threads=threads, schedule='static'):             # <<<<<<<<<<<<<<
+ *       # second kick
+ *       vel[i,0] += acc[i,0] * (dt/2.0)
+ */
+      /*finally:*/ {
+        /*normal exit:*/{
+          #ifdef WITH_THREAD
+          __Pyx_FastGIL_Forget();
+          Py_BLOCK_THREADS
+          #endif
+          goto __pyx_L14;
+        }
+        __pyx_L14:;
+      }
   }
 
-  /* "simulation_cython_openmp.pyx":50
- *             acc[i,2] += G * (dz * inv_sep) * mass[j][0]
+  /* "simulation_cython_openmp.pyx":51
+ *             acc[i,2] += temp * dz
  * 
  * cdef void leapfrog(int threads, double[:,:] acc, double[:,:] vel, double[:,:] pos, double[:,:] mass, float soft_param, float G, double dt):             # <<<<<<<<<<<<<<
  *   cdef int N = pos.shape[0]
@@ -2585,7 +2701,7 @@ static void __pyx_f_24simulation_cython_openmp_leapfrog(int __pyx_v_threads, __P
   __Pyx_RefNannyFinishContext();
 }
 
-/* "simulation_cython_openmp.pyx":74
+/* "simulation_cython_openmp.pyx":75
  *       vel[i,2] += acc[i,2] * (dt/2.0)
  * 
  * cpdef simulate(int threads, double[:,:] pos, double[:,:] mass, double[:,:] vel, float G, int N, double dt, float t_max, float soft_param):             # <<<<<<<<<<<<<<
@@ -2619,19 +2735,19 @@ static PyObject *__pyx_f_24simulation_cython_openmp_simulate(int __pyx_v_threads
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("simulate", 0);
 
-  /* "simulation_cython_openmp.pyx":81
+  /* "simulation_cython_openmp.pyx":82
  * 
  *     # data store for plotting, define t=0
  *     cdef int steps = int(np.ceil(t_max/dt))             # <<<<<<<<<<<<<<
  *     cdef double[:,:,:] pos_t = np.zeros((N,3,steps+1))
  *     pos_t[:,:,0] = pos
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 82, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_ceil); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_ceil); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 82, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = PyFloat_FromDouble((((double)__pyx_v_t_max) / __pyx_v_dt)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __pyx_t_2 = PyFloat_FromDouble((((double)__pyx_v_t_max) / __pyx_v_dt)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 82, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_4 = NULL;
   if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_3))) {
@@ -2646,33 +2762,33 @@ static PyObject *__pyx_f_24simulation_cython_openmp_simulate(int __pyx_v_threads
   __pyx_t_1 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_4, __pyx_t_2) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_2);
   __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 81, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 82, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyNumber_Int(__pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyNumber_Int(__pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 82, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_3); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 81, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_3); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 82, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_steps = __pyx_t_5;
 
-  /* "simulation_cython_openmp.pyx":82
+  /* "simulation_cython_openmp.pyx":83
  *     # data store for plotting, define t=0
  *     cdef int steps = int(np.ceil(t_max/dt))
  *     cdef double[:,:,:] pos_t = np.zeros((N,3,steps+1))             # <<<<<<<<<<<<<<
  *     pos_t[:,:,0] = pos
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 82, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 83, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 82, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 83, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_N); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 82, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_N); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 83, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = __Pyx_PyInt_From_long((__pyx_v_steps + 1)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 82, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_From_long((__pyx_v_steps + 1)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 83, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_6 = PyTuple_New(3); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 82, __pyx_L1_error)
+  __pyx_t_6 = PyTuple_New(3); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 83, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_1);
@@ -2696,16 +2812,16 @@ static PyObject *__pyx_f_24simulation_cython_openmp_simulate(int __pyx_v_threads
   __pyx_t_3 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_4, __pyx_t_6) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_6);
   __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 82, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 83, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_7 = __Pyx_PyObject_to_MemoryviewSlice_dsdsds_double(__pyx_t_3, PyBUF_WRITABLE); if (unlikely(!__pyx_t_7.memview)) __PYX_ERR(0, 82, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_to_MemoryviewSlice_dsdsds_double(__pyx_t_3, PyBUF_WRITABLE); if (unlikely(!__pyx_t_7.memview)) __PYX_ERR(0, 83, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_pos_t = __pyx_t_7;
   __pyx_t_7.memview = NULL;
   __pyx_t_7.data = NULL;
 
-  /* "simulation_cython_openmp.pyx":83
+  /* "simulation_cython_openmp.pyx":84
  *     cdef int steps = int(np.ceil(t_max/dt))
  *     cdef double[:,:,:] pos_t = np.zeros((N,3,steps+1))
  *     pos_t[:,:,0] = pos             # <<<<<<<<<<<<<<
@@ -2729,29 +2845,29 @@ __pyx_t_8.strides[1] = __pyx_v_pos_t.strides[1];
         __pyx_t_8.data += __pyx_tmp_idx * __pyx_tmp_stride;
 }
 
-if (unlikely(__pyx_memoryview_copy_contents(__pyx_v_pos, __pyx_t_8, 2, 2, 0) < 0)) __PYX_ERR(0, 83, __pyx_L1_error)
+if (unlikely(__pyx_memoryview_copy_contents(__pyx_v_pos, __pyx_t_8, 2, 2, 0) < 0)) __PYX_ERR(0, 84, __pyx_L1_error)
   __PYX_XDEC_MEMVIEW(&__pyx_t_8, 1);
   __pyx_t_8.memview = NULL;
   __pyx_t_8.data = NULL;
 
-  /* "simulation_cython_openmp.pyx":87
+  /* "simulation_cython_openmp.pyx":88
  *     # calculate initial conditions
  *     # cdef np.ndarray[np.double_t, ndim=2] acc = np.zeros(pos.shape).astype(np.double)
  *     cdef double[:,:] acc = np.zeros(np.array(pos).shape).astype(np.double)             # <<<<<<<<<<<<<<
  *     calc_acc(threads, acc, G, pos, mass, soft_param)
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_np); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 87, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_np); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 88, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_zeros); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 87, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_zeros); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 88, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 87, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 88, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_array); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 87, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_array); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 88, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_pos, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 87, __pyx_L1_error)
+  __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_pos, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 88, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_10 = NULL;
   if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_9))) {
@@ -2766,10 +2882,10 @@ if (unlikely(__pyx_memoryview_copy_contents(__pyx_v_pos, __pyx_t_8, 2, 2, 0) < 0
   __pyx_t_6 = (__pyx_t_10) ? __Pyx_PyObject_Call2Args(__pyx_t_9, __pyx_t_10, __pyx_t_1) : __Pyx_PyObject_CallOneArg(__pyx_t_9, __pyx_t_1);
   __Pyx_XDECREF(__pyx_t_10); __pyx_t_10 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 87, __pyx_L1_error)
+  if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 88, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_shape); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 87, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_shape); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 88, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __pyx_t_6 = NULL;
@@ -2785,15 +2901,15 @@ if (unlikely(__pyx_memoryview_copy_contents(__pyx_v_pos, __pyx_t_8, 2, 2, 0) < 0
   __pyx_t_2 = (__pyx_t_6) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_6, __pyx_t_9) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_9);
   __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 87, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 88, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_astype); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 87, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_astype); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 88, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 87, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 88, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_double); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 87, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_double); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 88, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = NULL;
@@ -2809,16 +2925,16 @@ if (unlikely(__pyx_memoryview_copy_contents(__pyx_v_pos, __pyx_t_8, 2, 2, 0) < 0
   __pyx_t_3 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_2, __pyx_t_9) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_9);
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 87, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 88, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_8 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(__pyx_t_3, PyBUF_WRITABLE); if (unlikely(!__pyx_t_8.memview)) __PYX_ERR(0, 87, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(__pyx_t_3, PyBUF_WRITABLE); if (unlikely(!__pyx_t_8.memview)) __PYX_ERR(0, 88, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_acc = __pyx_t_8;
   __pyx_t_8.memview = NULL;
   __pyx_t_8.data = NULL;
 
-  /* "simulation_cython_openmp.pyx":88
+  /* "simulation_cython_openmp.pyx":89
  *     # cdef np.ndarray[np.double_t, ndim=2] acc = np.zeros(pos.shape).astype(np.double)
  *     cdef double[:,:] acc = np.zeros(np.array(pos).shape).astype(np.double)
  *     calc_acc(threads, acc, G, pos, mass, soft_param)             # <<<<<<<<<<<<<<
@@ -2827,7 +2943,7 @@ if (unlikely(__pyx_memoryview_copy_contents(__pyx_v_pos, __pyx_t_8, 2, 2, 0) < 0
  */
   __pyx_f_24simulation_cython_openmp_calc_acc(__pyx_v_threads, __pyx_v_acc, __pyx_v_G, __pyx_v_pos, __pyx_v_mass, __pyx_v_soft_param);
 
-  /* "simulation_cython_openmp.pyx":91
+  /* "simulation_cython_openmp.pyx":92
  * 
  *     # Iteration loop by leapfrog integration
  *     cdef float t = 0             # <<<<<<<<<<<<<<
@@ -2836,7 +2952,7 @@ if (unlikely(__pyx_memoryview_copy_contents(__pyx_v_pos, __pyx_t_8, 2, 2, 0) < 0
  */
   __pyx_v_t = 0.0;
 
-  /* "simulation_cython_openmp.pyx":93
+  /* "simulation_cython_openmp.pyx":94
  *     cdef float t = 0
  *     cdef Py_ssize_t i
  *     for i in range(steps):             # <<<<<<<<<<<<<<
@@ -2848,7 +2964,7 @@ if (unlikely(__pyx_memoryview_copy_contents(__pyx_v_pos, __pyx_t_8, 2, 2, 0) < 0
   for (__pyx_t_12 = 0; __pyx_t_12 < __pyx_t_11; __pyx_t_12+=1) {
     __pyx_v_i = __pyx_t_12;
 
-    /* "simulation_cython_openmp.pyx":94
+    /* "simulation_cython_openmp.pyx":95
  *     cdef Py_ssize_t i
  *     for i in range(steps):
  *         leapfrog(threads, acc, vel, pos, mass, soft_param, G, dt)             # <<<<<<<<<<<<<<
@@ -2857,7 +2973,7 @@ if (unlikely(__pyx_memoryview_copy_contents(__pyx_v_pos, __pyx_t_8, 2, 2, 0) < 0
  */
     __pyx_f_24simulation_cython_openmp_leapfrog(__pyx_v_threads, __pyx_v_acc, __pyx_v_vel, __pyx_v_pos, __pyx_v_mass, __pyx_v_soft_param, __pyx_v_G, __pyx_v_dt);
 
-    /* "simulation_cython_openmp.pyx":97
+    /* "simulation_cython_openmp.pyx":98
  * 
  * 	      # new time
  *         t += dt             # <<<<<<<<<<<<<<
@@ -2866,7 +2982,7 @@ if (unlikely(__pyx_memoryview_copy_contents(__pyx_v_pos, __pyx_t_8, 2, 2, 0) < 0
  */
     __pyx_v_t = (__pyx_v_t + __pyx_v_dt);
 
-    /* "simulation_cython_openmp.pyx":100
+    /* "simulation_cython_openmp.pyx":101
  * 
  * 	      # get energy of system
  *         pos_t[:,:,i+1] = pos # TODO this can be lots of memory, maybe don't inlcude?             # <<<<<<<<<<<<<<
@@ -2890,24 +3006,24 @@ __pyx_t_8.strides[1] = __pyx_v_pos_t.strides[1];
         __pyx_t_8.data += __pyx_tmp_idx * __pyx_tmp_stride;
 }
 
-if (unlikely(__pyx_memoryview_copy_contents(__pyx_v_pos, __pyx_t_8, 2, 2, 0) < 0)) __PYX_ERR(0, 100, __pyx_L1_error)
+if (unlikely(__pyx_memoryview_copy_contents(__pyx_v_pos, __pyx_t_8, 2, 2, 0) < 0)) __PYX_ERR(0, 101, __pyx_L1_error)
     __PYX_XDEC_MEMVIEW(&__pyx_t_8, 1);
     __pyx_t_8.memview = NULL;
     __pyx_t_8.data = NULL;
   }
 
-  /* "simulation_cython_openmp.pyx":102
+  /* "simulation_cython_openmp.pyx":103
  *         pos_t[:,:,i+1] = pos # TODO this can be lots of memory, maybe don't inlcude?
  * 
  *     return np.array(pos_t)             # <<<<<<<<<<<<<<
  */
   __Pyx_XDECREF(__pyx_r);
-  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 102, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 103, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_array); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 102, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_array); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 103, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __pyx_memoryview_fromslice(__pyx_v_pos_t, 3, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 102, __pyx_L1_error)
+  __pyx_t_4 = __pyx_memoryview_fromslice(__pyx_v_pos_t, 3, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 103, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_t_2 = NULL;
   if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_9))) {
@@ -2922,14 +3038,14 @@ if (unlikely(__pyx_memoryview_copy_contents(__pyx_v_pos, __pyx_t_8, 2, 2, 0) < 0
   __pyx_t_3 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_9, __pyx_t_2, __pyx_t_4) : __Pyx_PyObject_CallOneArg(__pyx_t_9, __pyx_t_4);
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 102, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 103, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   __pyx_r = __pyx_t_3;
   __pyx_t_3 = 0;
   goto __pyx_L0;
 
-  /* "simulation_cython_openmp.pyx":74
+  /* "simulation_cython_openmp.pyx":75
  *       vel[i,2] += acc[i,2] * (dt/2.0)
  * 
  * cpdef simulate(int threads, double[:,:] pos, double[:,:] mass, double[:,:] vel, float G, int N, double dt, float t_max, float soft_param):             # <<<<<<<<<<<<<<
@@ -3014,53 +3130,53 @@ static PyObject *__pyx_pw_24simulation_cython_openmp_1simulate(PyObject *__pyx_s
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_pos)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("simulate", 1, 9, 9, 1); __PYX_ERR(0, 74, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("simulate", 1, 9, 9, 1); __PYX_ERR(0, 75, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_mass)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("simulate", 1, 9, 9, 2); __PYX_ERR(0, 74, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("simulate", 1, 9, 9, 2); __PYX_ERR(0, 75, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
         if (likely((values[3] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_vel)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("simulate", 1, 9, 9, 3); __PYX_ERR(0, 74, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("simulate", 1, 9, 9, 3); __PYX_ERR(0, 75, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  4:
         if (likely((values[4] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_G)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("simulate", 1, 9, 9, 4); __PYX_ERR(0, 74, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("simulate", 1, 9, 9, 4); __PYX_ERR(0, 75, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  5:
         if (likely((values[5] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_N)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("simulate", 1, 9, 9, 5); __PYX_ERR(0, 74, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("simulate", 1, 9, 9, 5); __PYX_ERR(0, 75, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  6:
         if (likely((values[6] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_dt)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("simulate", 1, 9, 9, 6); __PYX_ERR(0, 74, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("simulate", 1, 9, 9, 6); __PYX_ERR(0, 75, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  7:
         if (likely((values[7] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_t_max)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("simulate", 1, 9, 9, 7); __PYX_ERR(0, 74, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("simulate", 1, 9, 9, 7); __PYX_ERR(0, 75, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  8:
         if (likely((values[8] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_soft_param)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("simulate", 1, 9, 9, 8); __PYX_ERR(0, 74, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("simulate", 1, 9, 9, 8); __PYX_ERR(0, 75, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "simulate") < 0)) __PYX_ERR(0, 74, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "simulate") < 0)) __PYX_ERR(0, 75, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 9) {
       goto __pyx_L5_argtuple_error;
@@ -3075,19 +3191,19 @@ static PyObject *__pyx_pw_24simulation_cython_openmp_1simulate(PyObject *__pyx_s
       values[7] = PyTuple_GET_ITEM(__pyx_args, 7);
       values[8] = PyTuple_GET_ITEM(__pyx_args, 8);
     }
-    __pyx_v_threads = __Pyx_PyInt_As_int(values[0]); if (unlikely((__pyx_v_threads == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 74, __pyx_L3_error)
-    __pyx_v_pos = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(values[1], PyBUF_WRITABLE); if (unlikely(!__pyx_v_pos.memview)) __PYX_ERR(0, 74, __pyx_L3_error)
-    __pyx_v_mass = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(values[2], PyBUF_WRITABLE); if (unlikely(!__pyx_v_mass.memview)) __PYX_ERR(0, 74, __pyx_L3_error)
-    __pyx_v_vel = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(values[3], PyBUF_WRITABLE); if (unlikely(!__pyx_v_vel.memview)) __PYX_ERR(0, 74, __pyx_L3_error)
-    __pyx_v_G = __pyx_PyFloat_AsFloat(values[4]); if (unlikely((__pyx_v_G == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 74, __pyx_L3_error)
-    __pyx_v_N = __Pyx_PyInt_As_int(values[5]); if (unlikely((__pyx_v_N == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 74, __pyx_L3_error)
-    __pyx_v_dt = __pyx_PyFloat_AsDouble(values[6]); if (unlikely((__pyx_v_dt == (double)-1) && PyErr_Occurred())) __PYX_ERR(0, 74, __pyx_L3_error)
-    __pyx_v_t_max = __pyx_PyFloat_AsFloat(values[7]); if (unlikely((__pyx_v_t_max == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 74, __pyx_L3_error)
-    __pyx_v_soft_param = __pyx_PyFloat_AsFloat(values[8]); if (unlikely((__pyx_v_soft_param == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 74, __pyx_L3_error)
+    __pyx_v_threads = __Pyx_PyInt_As_int(values[0]); if (unlikely((__pyx_v_threads == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 75, __pyx_L3_error)
+    __pyx_v_pos = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(values[1], PyBUF_WRITABLE); if (unlikely(!__pyx_v_pos.memview)) __PYX_ERR(0, 75, __pyx_L3_error)
+    __pyx_v_mass = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(values[2], PyBUF_WRITABLE); if (unlikely(!__pyx_v_mass.memview)) __PYX_ERR(0, 75, __pyx_L3_error)
+    __pyx_v_vel = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(values[3], PyBUF_WRITABLE); if (unlikely(!__pyx_v_vel.memview)) __PYX_ERR(0, 75, __pyx_L3_error)
+    __pyx_v_G = __pyx_PyFloat_AsFloat(values[4]); if (unlikely((__pyx_v_G == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 75, __pyx_L3_error)
+    __pyx_v_N = __Pyx_PyInt_As_int(values[5]); if (unlikely((__pyx_v_N == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 75, __pyx_L3_error)
+    __pyx_v_dt = __pyx_PyFloat_AsDouble(values[6]); if (unlikely((__pyx_v_dt == (double)-1) && PyErr_Occurred())) __PYX_ERR(0, 75, __pyx_L3_error)
+    __pyx_v_t_max = __pyx_PyFloat_AsFloat(values[7]); if (unlikely((__pyx_v_t_max == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 75, __pyx_L3_error)
+    __pyx_v_soft_param = __pyx_PyFloat_AsFloat(values[8]); if (unlikely((__pyx_v_soft_param == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 75, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("simulate", 1, 9, 9, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 74, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("simulate", 1, 9, 9, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 75, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("simulation_cython_openmp.simulate", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -3109,7 +3225,7 @@ static PyObject *__pyx_pf_24simulation_cython_openmp_simulate(CYTHON_UNUSED PyOb
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("simulate", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_f_24simulation_cython_openmp_simulate(__pyx_v_threads, __pyx_v_pos, __pyx_v_mass, __pyx_v_vel, __pyx_v_G, __pyx_v_N, __pyx_v_dt, __pyx_v_t_max, __pyx_v_soft_param, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 74, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_24simulation_cython_openmp_simulate(__pyx_v_threads, __pyx_v_pos, __pyx_v_mass, __pyx_v_vel, __pyx_v_G, __pyx_v_N, __pyx_v_dt, __pyx_v_t_max, __pyx_v_soft_param, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 75, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -17026,7 +17142,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {0, 0, 0, 0, 0, 0, 0}
 };
 static CYTHON_SMALL_CODE int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 35, __pyx_L1_error)
+  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 36, __pyx_L1_error)
   __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(1, 133, __pyx_L1_error)
   __pyx_builtin_MemoryError = __Pyx_GetBuiltinName(__pyx_n_s_MemoryError); if (!__pyx_builtin_MemoryError) __PYX_ERR(1, 148, __pyx_L1_error)
   __pyx_builtin_enumerate = __Pyx_GetBuiltinName(__pyx_n_s_enumerate); if (!__pyx_builtin_enumerate) __PYX_ERR(1, 151, __pyx_L1_error)
