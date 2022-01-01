@@ -2,12 +2,12 @@
 
 cimport cython
 import numpy as np
-# cimport numpy as np
-from libc.math cimport sqrt, pow
 
-# ctypedef np.double_t np.double
+from cython.parallel cimport prange
+cimport openmp
+# from libc.math cimport sqrt
 
-cdef void calc_acc(double[:,:] acc, float G, double[:,:] pos, double[:,:] mass, float soft_param):
+cdef void calc_acc(int threads, double[:,:] acc, float G, double[:,:] pos, double[:,:] mass, float soft_param):
     '''
     Parameters
     ----------
@@ -25,7 +25,7 @@ cdef void calc_acc(double[:,:] acc, float G, double[:,:] pos, double[:,:] mass, 
     cdef double inv_sep
     cdef double dx, dy, dz
 
-    for i in range(N):
+    for i in prange(N, nogil=True, num_threads=threads):
         # Zero the array
         # TODO will this change the vectorisation
         acc[i,0] = 0
@@ -46,7 +46,7 @@ cdef void calc_acc(double[:,:] acc, float G, double[:,:] pos, double[:,:] mass, 
             acc[i,1] += G * (dy * inv_sep) * mass[j][0]
             acc[i,2] += G * (dz * inv_sep) * mass[j][0]
 
-cdef void leapfrog(double[:,:] acc, double[:,:] vel, double[:,:] pos, double[:,:] mass, float soft_param, float G, double dt):
+cdef void leapfrog(int threads, double[:,:] acc, double[:,:] vel, double[:,:] pos, double[:,:] mass, float soft_param, float G, double dt):
   cdef int N = pos.shape[0]
   cdef Py_ssize_t i
 
@@ -62,7 +62,7 @@ cdef void leapfrog(double[:,:] acc, double[:,:] vel, double[:,:] pos, double[:,:
       pos[i,2] += vel[i,2] * dt
 
   # recalculate accelerations
-  calc_acc(acc, G, pos, mass, soft_param)
+  calc_acc(threads, acc, G, pos, mass, soft_param)
 
   for i in range(N):
       # second kick
@@ -70,7 +70,7 @@ cdef void leapfrog(double[:,:] acc, double[:,:] vel, double[:,:] pos, double[:,:
       vel[i,1] += acc[i,1] * (dt/2.0)
       vel[i,2] += acc[i,2] * (dt/2.0)
 
-cpdef simulate(double[:,:] pos, double[:,:] mass, double[:,:] vel, float G, int N, double dt, float t_max, float soft_param):
+cpdef simulate(int threads, double[:,:] pos, double[:,:] mass, double[:,:] vel, float G, int N, double dt, float t_max, float soft_param):
     '''
     Calculate values for simulation
     '''
@@ -84,13 +84,13 @@ cpdef simulate(double[:,:] pos, double[:,:] mass, double[:,:] vel, float G, int 
     # calculate initial conditions
     # cdef np.ndarray[np.double_t, ndim=2] acc = np.zeros(pos.shape).astype(np.double)
     cdef double[:,:] acc = np.zeros(np.array(pos).shape).astype(np.double)
-    calc_acc(acc, G, pos, mass, soft_param)
+    calc_acc(threads, acc, G, pos, mass, soft_param)
 
     # Iteration loop by leapfrog integration
     cdef float t = 0
     cdef Py_ssize_t i
     for i in range(steps):
-        leapfrog(acc, vel, pos, mass, soft_param, G, dt)
+        leapfrog(threads, acc, vel, pos, mass, soft_param, G, dt)
 
 	      # new time
         t += dt

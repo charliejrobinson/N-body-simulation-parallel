@@ -9,6 +9,7 @@ import simulation_python_sqrt
 import simulation_chris_final
 import simulation_python_without_numpy
 import simulation_cython_without_numpy
+import simulation_cython_openmp
 #import simulation_cython
 
 import numpy as np
@@ -29,12 +30,13 @@ import argparse
 # TODO remove
 np.set_printoptions(precision=8)
 
-simulations = ['python', 'cython', 'python_original', 'python_sqrt', 'chris', 'python_without_numpy', 'cython_without_numpy']
+simulations = ['python', 'cython', 'python_original', 'python_sqrt', 'chris', 'python_without_numpy', 'cython_without_numpy', 'cython_openmp']
 
 parser = argparse.ArgumentParser(description='Gravity Simulator')
 
 parent_parser = argparse.ArgumentParser(add_help=False)
 parent_parser.add_argument('--seed', type=int, default=17, help='random seed to use')
+parent_parser.add_argument('--threads', type=int, default=1, help='number of threads to use for parallel code')
 parent_parser.add_argument('--dt', type=float, default=0.01, help='timestep')
 parent_parser.add_argument('--t_max', type=float, default=10.0, help='how many seconds simulation runs for')
 parent_parser.add_argument('--simulation', type=str, nargs='*', default=[], choices=simulations, help='Which simulation to use')
@@ -61,7 +63,7 @@ parser_stats = subparsers.add_parser('stats', help='Plot statistics')
 
 args = parser.parse_args()
 
-def run_simulation(simulation, pos, mass, vel, G, N, dt, t_max, soft_param):
+def run_simulation(threads, simulation, pos, mass, vel, G, N, dt, t_max, soft_param):
     start = timeit.default_timer()
 
     pos_t = None
@@ -77,6 +79,8 @@ def run_simulation(simulation, pos, mass, vel, G, N, dt, t_max, soft_param):
         pos_t = simulation_python_without_numpy.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
     elif simulation == 'cython_without_numpy':
         pos_t = simulation_cython_without_numpy.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
+    elif simulation == 'cython_openmp':
+        pos_t = simulation_cython_openmp.simulate(threads, pos, mass, vel, G, N, dt, t_max, soft_param)
     elif simulation == 'cython':
         pass # pos_t = simulation_cython.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
 
@@ -141,13 +145,14 @@ if args.command in ['run', 'profile', 'validate']:
 
     G = 1 # 6.6743 * 10**(-11) # m^3/(kg*s^2)    # Gravitational Constant - G =
     soft_param = 1e-5    # softening parameter, what should this value be?
+    threads = args.threads
 
     # pos_offset = 20000 # TODO remove
 
     valid_pos_t = None
     if args.command == 'validate':
         pos, vel, mass = initialise_environment(args.seed, args.N[0])
-        _, valid_pos_t = run_simulation(args.validation_simulation, pos, mass, vel, G, args.N[0], dt, t_max, soft_param)
+        _, valid_pos_t = run_simulation(threads, args.validation_simulation, pos, mass, vel, G, args.N[0], dt, t_max, soft_param)
 
     for simulation in args.simulation:
         if simulation not in stats:
@@ -155,7 +160,7 @@ if args.command in ['run', 'profile', 'validate']:
 
         stat = {
             'date': datetime.datetime.now(),
-            'dt': dt, 't_max': t_max, 'soft_param': soft_param,
+            'dt': dt, 't_max': t_max, 'soft_param': soft_param, 'threads': threads,
             'runs': {'N': [], 'duration': []},
         }
 
@@ -170,7 +175,7 @@ if args.command in ['run', 'profile', 'validate']:
             for i in range(runs):
                 pos, vel, mass = initialise_environment(args.seed, N)
 
-                duration, pos_t = run_simulation(simulation, pos, mass, vel, G, N, dt, t_max, soft_param)
+                duration, pos_t = run_simulation(threads, simulation, pos, mass, vel, G, N, dt, t_max, soft_param)
                 durations.append(duration)
 
                 if args.command == 'validate':

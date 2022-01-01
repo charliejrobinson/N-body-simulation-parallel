@@ -6,11 +6,13 @@ import os
 
 os.environ["CC"] = "/usr/local/opt/llvm/bin/clang"
 
+names = ['simulation_cython', 'simulation_cython_without_numpy', 'simulation_cython_openmp']
+
 # define an extension that will be cythonized and compiled
-extensions = [
-    Extension('simulation_cython', sources=["simulation_cython.pyx"], extra_compile_args=['-fopenmp', '-O3', '-ffast-math'], extra_link_args=['-fopenmp'], include_dirs=[numpy.get_include()]),
-    Extension('simulation_cython_without_numpy', sources=["simulation_cython_without_numpy.pyx"], extra_compile_args=['-fopenmp', '-O3', '-ffast-math'], extra_link_args=['-fopenmp'], include_dirs=[numpy.get_include()]),
-]
+
+extensions = []
+for name in names:
+    extensions.append(Extension(name, sources=["%s.pyx" % name], extra_compile_args=['-fopenmp', '-O3', '-ffast-math'], extra_link_args=['-fopenmp'], include_dirs=[numpy.get_include()]))
 
 setup(ext_modules=cythonize(extensions))
 

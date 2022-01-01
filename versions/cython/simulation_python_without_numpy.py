@@ -1,10 +1,7 @@
 import numpy as np
 import math
 
-# TODO remove
-np.set_printoptions(precision=8)
-
-def calc_acc(G, pos, mass, soft_param):
+def calc_acc(acc, G, pos, mass, soft_param):
     '''
     Parameters
     ----------
@@ -16,8 +13,10 @@ def calc_acc(G, pos, mass, soft_param):
     -------
     acc : Matrix of accelerations
     '''
-    N = pos.shape[0]
+    # Zero acc
     acc = np.zeros(pos.shape)
+
+    N = pos.shape[0]
 
     for i in range(N):
         for j in range(N):
@@ -50,7 +49,7 @@ def leapfrog(acc, vel, pos, mass, soft_param, G, dt):
         pos[i,2] += vel[i,2] * dt
 
     # recalculate accelerations
-    acc = calc_acc(G, pos, mass, soft_param)
+    acc = calc_acc(acc, G, pos, mass, soft_param)
 
     for i in range(N):
         # second kick
@@ -72,7 +71,8 @@ def simulate(pos, mass, vel, G, N, dt, t_max, soft_param):
     pos_t[:,:,0] = pos
 
     # calculate initial conditions
-    acc = calc_acc(G, pos, mass, soft_param)
+    acc = np.zeros(pos.shape)
+    acc = calc_acc(acc, G, pos, mass, soft_param)
 
     # Iteration loop by leapfrog integration
     t = 0
