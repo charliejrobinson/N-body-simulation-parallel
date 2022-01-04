@@ -50,6 +50,7 @@ parser_run.add_argument('--N', type=int, nargs='+', default=[50], help='number o
 parser_run.add_argument('--animate', action='store_true', help='plot animated graphs')
 parser_run.add_argument('--plot_start', action='store_true', help='plots start graph')
 parser_run.add_argument('--plot_end', action='store_true', help='plots end graph')
+parser_run.add_argument('--save', action='store_true', help='saves the output to a file')
 
 parser_profile = subparsers.add_parser('profile', help='Record stats for simulations', parents=[parent_parser])
 parser_profile.add_argument('--N', type=int, nargs='+', default=[3, 50, 100, 200, 400, 600, 800], help='number of particles')
@@ -60,7 +61,9 @@ parser_validate.add_argument('--N', type=int, nargs='+', default=[12], help='num
 parser_validate.add_argument('--validation_simulation', type=str, default='python_original', choices=simulations, help='Which simulation to use for validation')
 
 parser_load = subparsers.add_parser('load', help='Load a positions file')
-parser_load.add_argument('path', type=str, help='File path')
+parser_load.add_argument('path', type=str, nargs='+', help='File path')
+parser_load.add_argument('--compare', action='store_true', help='Checks results are equal to one another')
+parser_load.add_argument('--animate', action='store_true', help='Animate the results')
 
 parser_stats = subparsers.add_parser('stats', help='Plot statistics')
 
@@ -110,6 +113,22 @@ def initialise_environment(seed, N):
     # mass[0] = 1.0 * 10**(30)
 
     return pos, vel, mass
+
+def save(simulation, N, pos_t, t_max, dt):
+    data = {
+        'simulation': simulation,
+        'N': N,
+        'pos_t': pos_t,
+        't_max': t_max,
+        'dt': dt
+    }
+
+    date = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    path = 'data_%s_%s.p' % (simulation, date)
+
+    pickle.dump(data, open(path, 'wb'))
+
+    print('Saved to %s' % path)
 
 def plot_at_index(name, i, fps, pos_t, N, dt, t_max, simulation):
     t = i / fps
@@ -203,6 +222,9 @@ if args.command in ['run', 'profile', 'validate']:
             stat['runs']['N'].append(N)
             stat['runs']['duration'].append(duration)
 
+            if 'save' in args and args.save:
+                save(simulation, N, pos_t, t_max, dt)
+
             # Draw graph
             fps = (pos_t.shape[2]-1) / t_max
 
@@ -229,15 +251,27 @@ if args.command == 'profile':
 # ---------------------------------
 
 if args.command in ['load']:
-    data = pickle.load(open(args.path, 'rb'))
-    pos_t = data['pos_t']
+    compare = None
+    for path in args.path:
+        data = pickle.load(open(path, 'rb'))
+        pos_t = data['pos_t']
 
-    fps = (pos_t.shape[2]-1) / data['t_max']
+        if args.compare and compare is not None:
+            if np.allclose(pos_t, compare):
+                print('EQUAL')
+            else:
+                print('NOT EQUAL')
 
-    fig, scatter, title = plot_at_index('Gravity Simulator - %s - Animated' % data['simulation'], 0, fps, pos_t, data['N'], data['dt'], data['t_max'], data['simulation'])
-    ani = matplotlib.animation.FuncAnimation(fig, draw, frames=pos_t.shape[2], fargs=(title, fps, scatter, pos_t, data['N'], data['dt'], data['t_max'], data['simulation']), interval=round(1000 / fps), repeat=False)
 
-    plt.show()
+        compare = pos_t
+
+        if args.animate:
+            fps = (pos_t.shape[2]-1) / data['t_max']
+
+            fig, scatter, title = plot_at_index('Gravity Simulator - %s - Animated' % data['simulation'], 0, fps, pos_t, data['N'], data['dt'], data['t_max'], data['simulation'])
+            ani = matplotlib.animation.FuncAnimation(fig, draw, frames=pos_t.shape[2], fargs=(title, fps, scatter, pos_t, data['N'], data['dt'], data['t_max'], data['simulation']), interval=round(1000 / fps), repeat=False)
+
+            plt.show()
 
 if args.command in ['stats', 'profile']:
     for simulation_name, simulation_stats in stats.items():
