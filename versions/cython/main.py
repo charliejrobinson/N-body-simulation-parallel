@@ -59,6 +59,8 @@ parser_validate = subparsers.add_parser('validate', help='Validate a simulation 
 parser_validate.add_argument('--N', type=int, nargs='+', default=[12], help='number of particles')
 parser_validate.add_argument('--validation_simulation', type=str, default='python_original', choices=simulations, help='Which simulation to use for validation')
 
+parser_load = subparsers.add_parser('load', help='Load a positions file')
+parser_load.add_argument('path', type=str, help='File path')
 
 parser_stats = subparsers.add_parser('stats', help='Plot statistics')
 
@@ -93,7 +95,7 @@ def run_simulation(threads, simulation, pos, mass, vel, G, N, dt, t_max, soft_pa
     return end-start, pos_t
 
 def initialise_environment(seed, N):
-    np.random.seed(args.seed)
+    np.random.seed(seed)
 
     # ---------------------------------
     # Initalise enviroment
@@ -225,6 +227,17 @@ if args.command == 'profile':
     pickle.dump(stats, open('stats.p', 'wb'))
 
 # ---------------------------------
+
+if args.command in ['load']:
+    data = pickle.load(open(args.path, 'rb'))
+    pos_t = data['pos_t']
+
+    fps = (pos_t.shape[2]-1) / data['t_max']
+
+    fig, scatter, title = plot_at_index('Gravity Simulator - %s - Animated' % data['simulation'], 0, fps, pos_t, data['N'], data['dt'], data['t_max'], data['simulation'])
+    ani = matplotlib.animation.FuncAnimation(fig, draw, frames=pos_t.shape[2], fargs=(title, fps, scatter, pos_t, data['N'], data['dt'], data['t_max'], data['simulation']), interval=round(1000 / fps), repeat=False)
+
+    plt.show()
 
 if args.command in ['stats', 'profile']:
     for simulation_name, simulation_stats in stats.items():
