@@ -3,6 +3,8 @@ os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
 
+from mpi4py import MPI
+
 import simulation_python
 import simulation_python_original
 import simulation_python_sqrt
@@ -10,6 +12,7 @@ import simulation_chris_final
 import simulation_python_without_numpy
 import simulation_cython_without_numpy
 import simulation_cython_openmp
+import simulation_python_mpi
 #import simulation_cython
 
 import openmp_api_wraper
@@ -29,10 +32,15 @@ from matplotlib.animation import FuncAnimation
 import timeit
 import argparse
 
+comm = MPI.COMM_WORLD
+size = comm.Get_size()
+rank = comm.Get_rank()
+is_master = rank == 0
+
 # TODO remove
 np.set_printoptions(precision=8)
 
-simulations = ['python', 'cython', 'python_original', 'python_sqrt', 'chris', 'python_without_numpy', 'cython_without_numpy', 'cython_openmp']
+simulations = ['python', 'cython', 'python_original', 'python_sqrt', 'chris', 'python_without_numpy', 'cython_without_numpy', 'cython_openmp', 'python_mpi']
 
 parser = argparse.ArgumentParser(description='Gravity Simulator')
 
@@ -89,6 +97,8 @@ def run_simulation(threads, simulation, pos, mass, vel, G, N, dt, t_max, soft_pa
         pos_t = simulation_cython_without_numpy.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
     elif simulation == 'cython_openmp':
         pos_t = simulation_cython_openmp.simulate(threads, pos, mass, vel, G, N, dt, t_max, soft_param)
+    elif simulation == 'python_mpi':
+        pos_t = simulation_python_mpi.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
     elif simulation == 'cython':
         pass # pos_t = simulation_cython.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
 
@@ -173,7 +183,7 @@ if args.command in ['run', 'profile', 'validate']:
     # pos_offset = 20000 # TODO remove
 
     valid_pos_t = None
-    if args.command == 'validate':
+    if args.command == 'validate' and is_master:
         pos, vel, mass = initialise_environment(args.seed, args.N[0])
         _, valid_pos_t = run_simulation(threads, args.validation_simulation, pos, mass, vel, G, args.N[0], dt, t_max, soft_param)
 
@@ -201,7 +211,7 @@ if args.command in ['run', 'profile', 'validate']:
                 duration, pos_t = run_simulation(threads, simulation, pos, mass, vel, G, N, dt, t_max, soft_param)
                 durations.append(duration)
 
-                if args.command == 'validate':
+                if args.command == 'validate' and is_master:
                     if np.allclose(valid_pos_t, pos_t):
                         print('VALID against %s for %i' % (args.validation_simulation, args.N[0]))
                     else:
@@ -218,23 +228,36 @@ if args.command in ['run', 'profile', 'validate']:
 
             duration = np.average(durations)
 
-            print('Executed %s simulation %i times with N=%i in average %.2fs' % (simulation,runs,  N, duration))
+
+
+            if is_master:
+
+                extra = ''
+                if simulation == 'python_mpi':
+                    extra = '[%i processes]' % size
+                if simulation == 'cython_openmp':
+                    extra = '[%i threads]' % args.threads
+
+                print('Executed %s simulation %i times with N=%i in average %.2fs %s' % (simulation,runs,  N, duration, extra))
+            else:
+                continue
+
             stat['runs']['N'].append(N)
             stat['runs']['duration'].append(duration)
 
-            if 'save' in args and args.save:
+            if 'save' in args and args.save and is_master:
                 save(simulation, N, pos_t, t_max, dt)
 
             # Draw graph
             fps = (pos_t.shape[2]-1) / t_max
 
-            if 'plot_start' in args and args.plot_start:
+            if 'plot_start' in args and args.plot_start and is_master:
                 plot_at_index('Gravity Simulator - %s - Start' % simulation, 0, fps, pos_t, N, dt, t_max, simulation)
 
-            if 'plot_end' in args and args.plot_end:
+            if 'plot_end' in args and args.plot_end and is_master:
                 plot_at_index('Gravity Simulator - %s - End' % simulation, pos_t.shape[2]-1, fps, pos_t, N, dt, t_max, simulation)
 
-            if 'animate' in args and args.animate:
+            if 'animate' in args and args.animate and is_master:
                 fig, scatter, title = plot_at_index('Gravity Simulator - %s - Animated' % simulation, 0, fps, pos_t, N, dt, t_max, simulation)
                 ani = matplotlib.animation.FuncAnimation(fig, draw, frames=pos_t.shape[2], fargs=(title, fps, scatter, pos_t, N, dt, t_max, simulation), interval=round(1000 / fps), repeat=False)
 
@@ -244,7 +267,7 @@ if args.command in ['run', 'profile', 'validate']:
 
 # ---------------------------------
 # Write stats
-if args.command == 'profile':
+if args.command == 'profile' and is_master:
     print('Saving to stats.p')
     pickle.dump(stats, open('stats.p', 'wb'))
 
@@ -273,7 +296,7 @@ if args.command in ['load']:
 
             plt.show()
 
-if args.command in ['stats', 'profile']:
+if args.command in ['stats', 'profile'] and is_master:
     for simulation_name, simulation_stats in stats.items():
         last_run = simulation_stats[-1]
         plt.plot(last_run['runs']['N'], last_run['runs']['duration'], marker='o', label=simulation_name)
