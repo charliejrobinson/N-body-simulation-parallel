@@ -13,6 +13,7 @@ import simulation_python_without_numpy
 import simulation_cython_without_numpy
 import simulation_cython_openmp
 import simulation_python_mpi
+import simulation_python_mpi_ring
 #import simulation_cython
 
 import openmp_api_wraper
@@ -40,7 +41,7 @@ is_master = rank == 0
 # TODO remove
 np.set_printoptions(precision=8)
 
-simulations = ['python', 'cython', 'python_original', 'python_sqrt', 'chris', 'python_without_numpy', 'cython_without_numpy', 'cython_openmp', 'python_mpi']
+simulations = ['python', 'cython', 'python_original', 'python_sqrt', 'chris', 'python_without_numpy', 'cython_without_numpy', 'cython_openmp', 'python_mpi', 'python_mpi_ring']
 
 parser = argparse.ArgumentParser(description='Gravity Simulator')
 
@@ -98,6 +99,8 @@ def run_simulation(threads, simulation, pos, mass, vel, G, N, dt, t_max, soft_pa
     elif simulation == 'cython_openmp':
         pos_t = simulation_cython_openmp.simulate(threads, pos, mass, vel, G, N, dt, t_max, soft_param)
     elif simulation == 'python_mpi':
+        pos_t = simulation_python_mpi.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
+    elif simulation == 'python_mpi_ring':
         pos_t = simulation_python_mpi.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
     elif simulation == 'cython':
         pass # pos_t = simulation_cython.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
@@ -228,12 +231,9 @@ if args.command in ['run', 'profile', 'validate']:
 
             duration = np.average(durations)
 
-
-
             if is_master:
-
                 extra = ''
-                if simulation == 'python_mpi':
+                if simulation in ['python_mpi_ring', 'python_mpi']:
                     extra = '[%i processes]' % size
                 if simulation == 'cython_openmp':
                     extra = '[%i threads]' % args.threads
