@@ -96,13 +96,12 @@ def simulate(pos, mass, vel, G, N, dt, t_max, soft_param):
     vel = params['vel']
     mass = params['mass']
 
-    dt = params['dt']
     t = 0
 
-    steps = int(np.ceil(params['t_max'] / dt))
-    count = int(np.ceil(params['N'] / size))
+    steps = int(np.ceil(t_max / dt))
+    count = int(np.ceil(N / size))
 
-    loc_n = int(params['N'] / size) # Number of particales locally
+    loc_n = int(N / size) # Number of particales locally
     index_from = int(loc_n * rank)
     index_to   = int(loc_n * (rank + 1))
 
@@ -111,7 +110,7 @@ def simulate(pos, mass, vel, G, N, dt, t_max, soft_param):
     loc_acc = np.zeros(loc_pos.shape)
     tmp_data = np.zeros(loc_pos.shape)
 
-    loc_acc = calc_acc(loc_acc, params['G'], loc_pos, mass, params['soft_param'], tmp_data, params['N'], loc_n)
+    loc_acc = calc_acc(loc_acc, G, loc_pos, mass, soft_param, tmp_data, N, loc_n)
 
     for x in range(steps):
         for i in range(loc_n):
@@ -125,7 +124,7 @@ def simulate(pos, mass, vel, G, N, dt, t_max, soft_param):
             loc_pos[i,1] += loc_vel[i,1] * dt
             loc_pos[i,2] += loc_vel[i,2] * dt
 
-        loc_acc = calc_acc(loc_acc, params['G'], loc_pos, mass, params['soft_param'], tmp_data, params['N'], loc_n)
+        loc_acc = calc_acc(loc_acc, G, loc_pos, mass, soft_param, tmp_data, N, loc_n)
         # print(loc_pos)
 
         for i in range(loc_n):
@@ -139,7 +138,7 @@ def simulate(pos, mass, vel, G, N, dt, t_max, soft_param):
         # TODO slow, if don't need to output sim each time can speed up
         recvbuf = np.empty([size, loc_n, 3])
         comm.Gather(loc_pos, recvbuf)
-        pos = recvbuf.reshape((params['N'], 3))
+        pos = recvbuf.reshape((N, 3))
 
         if is_master:
             pos_t[:,:,x+1] = np.copy(pos)

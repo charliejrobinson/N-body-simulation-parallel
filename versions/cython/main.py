@@ -1,4 +1,6 @@
 import os
+import platform
+
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -8,12 +10,12 @@ from mpi4py import MPI
 import simulation_python
 import simulation_python_original
 import simulation_python_sqrt
-import simulation_chris_final
 import simulation_python_without_numpy
 import simulation_cython_without_numpy
 import simulation_cython_openmp
 import simulation_python_mpi
 import simulation_python_mpi_ring
+import simulation_cython_mpi_ring
 #import simulation_cython
 
 import openmp_api_wraper
@@ -25,7 +27,8 @@ import time
 import sys
 import datetime
 
-matplotlib.use('MACOSX')
+if platform.system() == 'Darwin':
+    matplotlib.use('MACOSX')
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -41,7 +44,7 @@ is_master = rank == 0
 # TODO remove
 np.set_printoptions(precision=8)
 
-simulations = ['python', 'cython', 'python_original', 'python_sqrt', 'chris', 'python_without_numpy', 'cython_without_numpy', 'cython_openmp', 'python_mpi', 'python_mpi_ring']
+simulations = ['python', 'cython', 'python_original', 'python_sqrt', 'python_without_numpy', 'cython_without_numpy', 'cython_openmp', 'python_mpi', 'python_mpi_ring', 'cython_mpi_ring']
 
 parser = argparse.ArgumentParser(description='Gravity Simulator')
 
@@ -68,6 +71,7 @@ parser_profile.add_argument('--average_over', type=int, default=3, help='Number 
 parser_validate = subparsers.add_parser('validate', help='Validate a simulation is correct', parents=[parent_parser])
 parser_validate.add_argument('--N', type=int, nargs='+', default=[12], help='number of particles')
 parser_validate.add_argument('--validation_simulation', type=str, default='python_original', choices=simulations, help='Which simulation to use for validation')
+parser_validate.add_argument('--print', action='store_true', help='Print results to compare')
 
 parser_load = subparsers.add_parser('load', help='Load a positions file')
 parser_load.add_argument('path', type=str, nargs='+', help='File path')
@@ -90,8 +94,6 @@ def run_simulation(threads, simulation, pos, mass, vel, G, N, dt, t_max, soft_pa
         pos_t = simulation_python_original.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
     elif simulation == 'python_sqrt':
         pos_t = simulation_python_sqrt.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
-    elif simulation == 'chris':
-        pos_t = simulation_chris_final.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
     elif simulation == 'python_without_numpy':
         pos_t = simulation_python_without_numpy.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
     elif simulation == 'cython_without_numpy':
@@ -101,7 +103,9 @@ def run_simulation(threads, simulation, pos, mass, vel, G, N, dt, t_max, soft_pa
     elif simulation == 'python_mpi':
         pos_t = simulation_python_mpi.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
     elif simulation == 'python_mpi_ring':
-        pos_t = simulation_python_mpi.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
+        pos_t = simulation_python_mpi_ring.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
+    elif simulation == 'cython_mpi_ring':
+        pos_t = simulation_cython_mpi_ring.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
     elif simulation == 'cython':
         pass # pos_t = simulation_cython.simulate(pos, mass, vel, G, N, dt, t_max, soft_param)
 
@@ -229,14 +233,23 @@ if args.command in ['run', 'profile', 'validate']:
                         # print(pos_t[-1])
                         print('*** INVALID against %s for %i' % (args.validation_simulation, args.N[0]))
 
-            duration = np.average(durations)
+                        if args.print:
+                            print(valid_pos_t[:,:,-1])
+                            print(pos_t[:,:,-1])
+
+            duration = np.mean(durations)
+            duration_low = np.min(durations)
+            duration_high = np.max(durations)
 
             if is_master:
                 extra = ''
-                if simulation in ['python_mpi_ring', 'python_mpi']:
-                    extra = '[%i processes]' % size
-                if simulation == 'cython_openmp':
-                    extra = '[%i threads]' % args.threads
+                if runs > 1:
+                    extra += '[error %.2fs - %.2fs]' % (duration_low, duration_high)
+
+                if 'mpi' in simulation:
+                    extra += '[%i processes]' % size
+                elif 'openmp' in simulation:
+                    extra += '[%i threads]' % args.threads
 
                 print('Executed %s simulation %i times with N=%i in average %.2fs %s' % (simulation,runs,  N, duration, extra))
             else:
@@ -296,7 +309,7 @@ if args.command in ['load']:
 
             plt.show()
 
-if args.command in ['stats', 'profile'] and is_master:
+if args.command in ['stats'] and is_master:
     for simulation_name, simulation_stats in stats.items():
         last_run = simulation_stats[-1]
         plt.plot(last_run['runs']['N'], last_run['runs']['duration'], marker='o', label=simulation_name)
