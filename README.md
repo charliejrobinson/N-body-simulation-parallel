@@ -1,3 +1,8 @@
+# High performance computing project [University of Bristol]
+Investigations into parallel computing for an N-body gravity simulation for a 4th year Physics high performance computing unit (result: 89%). Pdf available.
+
+![Front of research paper](https://github.com/charliejrobinson/N-body-simulation-parallel/blob/main/HPC.PNG)
+
 ## Compiling
 `python3 setup.py build_ext --inplace`
 
