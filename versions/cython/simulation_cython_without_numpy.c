@@ -9,7 +9,10 @@
             "-O3",
             "-ffast-math",
             "-ftree-vectorize",
-            "-funroll-loops"
+            "-funroll-loops",
+            "-fno-tree-vectorize",
+            "-mno-sse",
+            "-mno-avx"
         ],
         "extra_link_args": [
             "-fopenmp"

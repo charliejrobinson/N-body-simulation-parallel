@@ -1,39 +1,21 @@
 #cython: language_level=3, boundscheck=False, wraparound=False, initializedcheck=False, cdivision=True
 
-cimport cython
-import numpy as np
-# cimport numpy as np
-from libc.math cimport sqrt, pow
-
 from mpi4py import MPI
+import numpy as np
+
 comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-size = comm.Get_size()
+cdef int size = comm.Get_size()
+cdef int rank = comm.Get_rank()
+cdef int is_master = rank == 0
 
-# ctypedef np.double_t np.double
-
-cdef void calc_acc(double[:,:] acc, float G, double[:,:] pos, double[:,:] mass, float soft_param):
-    '''
-    Parameters
-    ----------
-    pos : (N,3) Matrix of position vectors
-    mass : (N,1) Matrix of masses
-    soft_param : Softening parameter
-
-    Returns
-    -------
-    acc : Matrix of accelerations
-    '''
+cdef calc_acc(int index_from, int index_to, double[:,:] acc, float G, double[:,:] pos, double[:,:] mass, float soft_param):
     cdef Py_ssize_t i, j
     cdef double x1, y1, z1, x2, yz, z2
-    cdef int N = pos.shape[0]
+    cdef int N = np.array(pos).shape[0]
     cdef double inv_sep
     cdef double dx, dy, dz
 
-    # TODO fast array
-    for i in range(N):
-        # Zero the array
-        # TODO will this change the vectorisation
+    for i in range(index_from, index_to):
         acc[i,0] = 0
         acc[i,1] = 0
         acc[i,2] = 0
@@ -52,60 +34,77 @@ cdef void calc_acc(double[:,:] acc, float G, double[:,:] pos, double[:,:] mass, 
             acc[i,1] += G * (dy * inv_sep) * mass[j][0]
             acc[i,2] += G * (dz * inv_sep) * mass[j][0]
 
-cdef void leapfrog(double[:,:] acc, double[:,:] vel, double[:,:] pos, double[:,:] mass, float soft_param, float G, double dt):
-  cdef int N = pos.shape[0]
-  cdef Py_ssize_t i
+cpdef simulate(double[:,:] pos, double[:,:] mass, double[:,:] vel, float G, int N, float dt, float t_max, float soft_param):
+    params = None
+    pos_t = None
 
-  for i in range(N):
-      # first kick
-      vel[i,0] += acc[i,0] * (dt/2.0)
-      vel[i,1] += acc[i,1] * (dt/2.0)
-      vel[i,2] += acc[i,2] * (dt/2.0)
+    cdef double[:,:] acc
 
-      # drift
-      pos[i,0] += vel[i,0] * dt
-      pos[i,1] += vel[i,1] * dt
-      pos[i,2] += vel[i,2] * dt
+    if is_master:
+        acc = np.zeros((N, 3))
+        calc_acc(0, N, acc, G, pos, mass, soft_param)
 
-  # recalculate accelerations
-  comm.Bcast(pos, root=0)
-  calc_acc(acc, G, pos, mass, soft_param)
+        params = {'pos': np.array(pos), 'vel': np.array(vel), 'mass': np.array(mass), 'acc': np.array(acc)}
 
-  for i in range(N):
-      # second kick
-      vel[i,0] += acc[i,0] * (dt/2.0)
-      vel[i,1] += acc[i,1] * (dt/2.0)
-      vel[i,2] += acc[i,2] * (dt/2.0)
+        steps = int(np.ceil(t_max / dt))
+        pos_t = np.zeros((N,3,steps+1))
+        pos_t[:,:,0] = pos
 
-cpdef simulate(double[:,:] pos, double[:,:] mass, double[:,:] vel, float G, int N, double dt, float t_max, float soft_param):
-    '''
-    Calculate values for simulation
-    '''
-    # TODO use triangular matrix to avoid calcualting same particales twice
+    # Broadcast / Recive enviroment
+    params = comm.bcast(params, root=0)
+    # TODO scatter with cyclic_mpi_t vel and pos, mass is global
 
-    # data store for plotting, define t=0
-    cdef int steps = int(np.ceil(t_max/dt))
-    cdef double[:,:,:] pos_t = np.zeros((N,3,steps+1))
-    pos_t[:,:,0] = pos
+    # Unpack environment
+    pos = params['pos']
+    vel = params['vel']
+    mass = params['mass']
+    acc = params['acc']
 
-    # calculate initial conditions
-    # cdef np.ndarray[np.double_t, ndim=2] acc = np.zeros(pos.shape).astype(np.double)
-    cdef double[:,:] acc = np.zeros(np.array(pos).shape).astype(np.double)
-    calc_acc(acc, G, pos, mass, soft_param)
-
-    comm.Bcast(acc, root=0)
-    comm.Bcast(pos, root=0)
-
-    # Iteration loop by leapfrog integration
     cdef float t = 0
-    cdef Py_ssize_t i
-    for i in range(steps):
-        leapfrog(acc, vel, pos, mass, soft_param, G, dt)
 
-	      # new time
+    steps = int(np.ceil(t_max/dt))
+    cdef int count = int(np.ceil(N / size))
+
+    cdef int width = np.floor(N / size)
+    cdef int width_padded = width + (N % size)
+    cdef int index_from = width * rank
+    cdef int index_to   = width * (rank + 1)
+    cdef int index_to_padded = index_to + (N % size)
+
+    cdef Py_ssize_t x, i, j
+
+    cdef double[:,:,:] _recvbuf
+
+    for x in range(steps):
+        for i in range(index_from, index_to_padded):
+            # first kick
+            vel[i,0] += acc[i,0] * (dt/2.0)
+            vel[i,1] += acc[i,1] * (dt/2.0)
+            vel[i,2] += acc[i,2] * (dt/2.0)
+
+            # drift
+            pos[i,0] += vel[i,0] * dt
+            pos[i,1] += vel[i,1] * dt
+            pos[i,2] += vel[i,2] * dt
+
+        recvbuf = np.empty([size, width_padded, 3])
+        comm.Allgather(pos[index_from:index_to_padded], recvbuf)
+        _recvbuf = recvbuf
+
+        for j in range(size):
+          pos[index_from:index_to_padded] = _recvbuf[j]
+
+        calc_acc(index_from, index_to_padded, acc, G, pos, mass, soft_param)
+
+        for i in range(index_from, index_to_padded):
+            # second kick
+            vel[i,0] += acc[i,0] * (dt/2.0)
+            vel[i,1] += acc[i,1] * (dt/2.0)
+            vel[i,2] += acc[i,2] * (dt/2.0)
+
         t += dt
 
-	      # get energy of system
-        pos_t[:,:,i+1] = pos # TODO this can be lots of memory, maybe don't inlcude?
+        if is_master:
+            pos_t[:,:,x+1] = pos
 
     return np.array(pos_t)

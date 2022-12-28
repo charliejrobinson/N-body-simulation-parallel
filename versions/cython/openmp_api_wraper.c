@@ -7,7 +7,12 @@
         "extra_compile_args": [
             "-fopenmp",
             "-O3",
-            "-ffast-math"
+            "-ffast-math",
+            "-ftree-vectorize",
+            "-funroll-loops",
+            "-fno-tree-vectorize",
+            "-mno-sse",
+            "-mno-avx"
         ],
         "extra_link_args": [
             "-fopenmp"

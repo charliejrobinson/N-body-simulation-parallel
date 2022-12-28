@@ -5,7 +5,13 @@
     "distutils": {
         "extra_compile_args": [
             "-fopenmp",
-            "-O3"
+            "-O3",
+            "-ffast-math",
+            "-ftree-vectorize",
+            "-funroll-loops",
+            "-fno-tree-vectorize",
+            "-mno-sse",
+            "-mno-avx"
         ],
         "extra_link_args": [
             "-fopenmp"

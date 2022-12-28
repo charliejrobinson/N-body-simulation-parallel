@@ -7,7 +7,7 @@ from cython.parallel cimport prange
 cimport openmp
 # from libc.math cimport sqrt
 
-cdef void calc_acc(int threads, double[:,:] acc, float G, double[:,:] pos, double[:,:] mass, float soft_param):
+cdef void calc_acc(str schedule, int chunk_size, int threads, double[:,:] acc, float G, double[:,:] pos, double[:,:] mass, float soft_param):
     '''
     Parameters
     ----------
@@ -26,7 +26,7 @@ cdef void calc_acc(int threads, double[:,:] acc, float G, double[:,:] pos, doubl
     cdef double temp
     cdef double dx, dy, dz
 
-    for i in prange(N, nogil=True, num_threads=threads, schedule='static'):
+    for i in prange(N, nogil=True, num_threads=threads, schedule='static', chunksize=chunk_size):
         # Zero the array
         # TODO will this change the vectorisation
         acc[i,0] = 0
@@ -48,11 +48,11 @@ cdef void calc_acc(int threads, double[:,:] acc, float G, double[:,:] pos, doubl
             acc[i,1] += temp * dy
             acc[i,2] += temp * dz
 
-cdef void leapfrog(int threads, double[:,:] acc, double[:,:] vel, double[:,:] pos, double[:,:] mass, float soft_param, float G, double dt):
+cdef void leapfrog(str schedule, int chunk_size, int threads, double[:,:] acc, double[:,:] vel, double[:,:] pos, double[:,:] mass, float soft_param, float G, double dt):
   cdef int N = pos.shape[0]
   cdef Py_ssize_t i
 
-  for i in prange(N, nogil=True, num_threads=threads, schedule='static'):
+  for i in prange(N, nogil=True, num_threads=threads, schedule='static', chunksize=chunk_size):
       # first kick
       vel[i,0] += acc[i,0] * (dt/2.0)
       vel[i,1] += acc[i,1] * (dt/2.0)
@@ -64,15 +64,15 @@ cdef void leapfrog(int threads, double[:,:] acc, double[:,:] vel, double[:,:] po
       pos[i,2] += vel[i,2] * dt
 
   # recalculate accelerations
-  calc_acc(threads, acc, G, pos, mass, soft_param)
+  calc_acc(schedule, chunk_size, threads, acc, G, pos, mass, soft_param)
 
-  for i in prange(N, nogil=True, num_threads=threads, schedule='static'):
+  for i in prange(N, nogil=True, num_threads=threads, schedule='static', chunksize=chunk_size):
       # second kick
       vel[i,0] += acc[i,0] * (dt/2.0)
       vel[i,1] += acc[i,1] * (dt/2.0)
       vel[i,2] += acc[i,2] * (dt/2.0)
 
-cpdef simulate(int threads, double[:,:] pos, double[:,:] mass, double[:,:] vel, float G, int N, double dt, float t_max, float soft_param):
+cpdef simulate(str schedule, int chunk_size, int threads, double[:,:] pos, double[:,:] mass, double[:,:] vel, float G, int N, double dt, float t_max, float soft_param):
     '''
     Calculate values for simulation
     '''
@@ -86,13 +86,13 @@ cpdef simulate(int threads, double[:,:] pos, double[:,:] mass, double[:,:] vel, 
     # calculate initial conditions
     # cdef np.ndarray[np.double_t, ndim=2] acc = np.zeros(pos.shape).astype(np.double)
     cdef double[:,:] acc = np.zeros(np.array(pos).shape).astype(np.double)
-    calc_acc(threads, acc, G, pos, mass, soft_param)
+    calc_acc(schedule, chunk_size, threads, acc, G, pos, mass, soft_param)
 
     # Iteration loop by leapfrog integration
     cdef float t = 0
     cdef Py_ssize_t i
     for i in range(steps):
-        leapfrog(threads, acc, vel, pos, mass, soft_param, G, dt)
+        leapfrog(schedule, chunk_size, threads, acc, vel, pos, mass, soft_param, G, dt)
 
 	      # new time
         t += dt
